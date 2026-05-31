@@ -1,0 +1,48 @@
+name: Sync org repositories
+
+# The scheduled run is always report-only (dry-run): it never modifies a repo
+# or opens a PR, it just logs what would change. To actually apply, trigger it
+# manually from the Actions tab and untick "Report changes without applying".
+on:
+  schedule:
+    - cron: '17 6 * * 1'   # Mondays 06:17 UTC
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Report changes without applying them'
+        type: boolean
+        default: true
+
+concurrency:
+  group: org-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          coverage: none
+
+      - name: Install dependencies
+        run: composer install --no-dev --no-interaction --prefer-dist
+
+      # Mints a short-lived installation token scoped to the App's repos.
+      - name: Generate token
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.SYNC_APP_ID }}
+          private-key: ${{ secrets.SYNC_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+
+      # Scheduled runs are forced to dry-run; only a manual dispatch with the
+      # box unticked applies changes.
+      - name: Run sync
+        env:
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: php sync.php ${{ (github.event_name == 'schedule' || inputs.dry_run) && '--dry-run' || '' }}

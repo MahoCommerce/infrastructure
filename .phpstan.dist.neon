@@ -1,0 +1,20 @@
+includes:
+    - vendor/phpstan/phpstan/conf/bleedingEdge.neon
+    - vendor/phpstan/phpstan-deprecation-rules/rules.neon
+    - vendor/phpstan/phpstan-strict-rules/rules.neon
+
+parameters:
+    strictRules:
+        allRules: false
+        matchingInheritedMethodNames: true
+        disallowedBacktick: true
+
+    level: 8
+    tmpDir: .phpstan.cache
+    reportUnmatchedIgnoredErrors: true
+    checkMissingOverrideMethodAttribute: true
+
+    paths:
+        - src
+        - sync.php
+        - config

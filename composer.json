@@ -1,0 +1,35 @@
+{
+    "name": "mahocommerce/infrastructure",
+    "description": "Keeps MahoCommerce org repositories in sync: labels, branch protection, shared CI stubs and README badges",
+    "type": "project",
+    "license": "MIT",
+    "require": {
+        "php": ">=8.3",
+        "symfony/http-client": "^7.4"
+    },
+    "require-dev": {
+        "friendsofphp/php-cs-fixer": "^3",
+        "phpstan/phpstan": "^2.0",
+        "phpstan/phpstan-deprecation-rules": "^2.0",
+        "phpstan/phpstan-strict-rules": "^2.0",
+        "rector/rector": "^2"
+    },
+    "autoload": {
+        "psr-4": {
+            "Maho\\Infra\\": "src/"
+        }
+    },
+    "config": {
+        "sort-packages": true
+    },
+    "scripts": {
+        "lint": [
+            "@lint:cs-fixer",
+            "@lint:rector",
+            "@lint:phpstan"
+        ],
+        "lint:cs-fixer": "php vendor/bin/php-cs-fixer fix --diff --dry-run",
+        "lint:rector": "php vendor/bin/rector -c .rector.php --dry-run",
+        "lint:phpstan": "XDEBUG_MODE=off php vendor/bin/phpstan analyze"
+    }
+}
