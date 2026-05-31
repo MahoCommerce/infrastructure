@@ -30,7 +30,8 @@ php sync.php --repo=module-mollie      # limit to one repo
 ## CI
 
 `.github/workflows/sync.yml` runs weekly and on demand. It authenticates as a
-GitHub App (`SYNC_APP_CLIENT_ID` + `SYNC_APP_PRIVATE_KEY` secrets) and mints a
+GitHub App (`MAHO_ORGANIZATION_CONTROLLER_CLIENT_ID` +
+`MAHO_ORGANIZATION_CONTROLLER_PRIVATE_KEY` org secrets) and mints a
 short-lived token scoped to the org. Use `workflow_dispatch` with the dry-run
 input to preview from the Actions tab.
 

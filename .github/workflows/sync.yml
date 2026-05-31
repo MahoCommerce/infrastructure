@@ -36,8 +36,8 @@ jobs:
         id: app-token
         uses: actions/create-github-app-token@v3
         with:
-          client-id: ${{ secrets.SYNC_APP_CLIENT_ID }}
-          private-key: ${{ secrets.SYNC_APP_PRIVATE_KEY }}
+          client-id: ${{ secrets.MAHO_ORGANIZATION_CONTROLLER_CLIENT_ID }}
+          private-key: ${{ secrets.MAHO_ORGANIZATION_CONTROLLER_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
 
       # Scheduled runs are forced to dry-run; only a manual dispatch with the
