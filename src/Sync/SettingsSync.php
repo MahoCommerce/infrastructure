@@ -23,12 +23,15 @@ final readonly class SettingsSync
         private string $owner,
     ) {}
 
-    /** @param array<array-key, mixed> $desired effective config for the repo */
-    public function run(string $repo, array $desired): void
+    /**
+     * @param array<array-key, mixed> $desired effective config for the repo
+     * @return list<string> human-readable summary of what changed (empty if nothing)
+     */
+    public function run(string $repo, array $desired): array
     {
         $settings = (array) ($desired['settings'] ?? []);
         if ($settings === []) {
-            return;
+            return [];
         }
 
         $current = $this->gh->get("/repos/{$this->owner}/{$repo}");
@@ -41,10 +44,11 @@ final readonly class SettingsSync
         }
 
         if ($diff === []) {
-            return;
+            return [];
         }
 
-        echo '    = settings: ' . implode(', ', array_keys($diff)) . "\n";
         $this->gh->patch("/repos/{$this->owner}/{$repo}", $diff);
+
+        return ['settings  ' . implode(', ', array_keys($diff))];
     }
 }

@@ -40,24 +40,55 @@ $reconcilers = [
 ];
 
 $repos = $only !== null ? [$only] : discoverRepos($gh, $config);
-$failures = 0;
 
-foreach ($repos as $repo) {
-    echo ($dryRun ? '[dry-run] ' : '') . "Syncing {$repo}\n";
-    $desired = $config->forRepo($repo);
-
-    foreach ($reconcilers as $reconciler) {
-        try {
-            $reconciler->run($repo, $desired);
-        } catch (\Throwable $e) {
-            $failures++;
-            fwrite(STDERR, '    ! ' . $reconciler::class . ": {$e->getMessage()}\n");
-        }
-    }
+if ($dryRun) {
+    echo "DRY RUN — reporting only, nothing will be changed.\n\n";
 }
 
-echo $failures === 0 ? "\nDone.\n" : "\nDone with {$failures} failure(s).\n";
-exit($failures === 0 ? 0 : 1);
+$changedCount = 0;
+$upToDate = 0;
+$failed = [];
+
+foreach ($repos as $repo) {
+    $desired = $config->forRepo($repo);
+
+    $changes = [];
+    foreach ($reconcilers as $reconciler) {
+        try {
+            $changes = [...$changes, ...$reconciler->run($repo, $desired)];
+        } catch (\Throwable $e) {
+            $failed[$repo] = $e->getMessage();
+        }
+    }
+
+    if ($changes === []) {
+        $upToDate++;
+        continue;
+    }
+
+    $changedCount++;
+    echo "{$repo}\n";
+    foreach ($changes as $change) {
+        echo "  {$change}\n";
+    }
+    echo "\n";
+}
+
+$verb = $dryRun ? 'would change' : 'changed';
+echo sprintf(
+    "%d repos checked · %d %s · %d up to date · %d failed\n",
+    count($repos),
+    $changedCount,
+    $verb,
+    $upToDate,
+    count($failed),
+);
+
+foreach ($failed as $repo => $message) {
+    fwrite(STDERR, "  ! {$repo}: {$message}\n");
+}
+
+exit($failed === [] ? 0 : 1);
 
 /**
  * Every non-archived org repo (so new repos are covered automatically), plus

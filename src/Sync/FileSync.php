@@ -26,12 +26,15 @@ final readonly class FileSync
         private string $configDir,
     ) {}
 
-    /** @param array<array-key, mixed> $desired effective config for the repo */
-    public function run(string $repo, array $desired): void
+    /**
+     * @param array<array-key, mixed> $desired effective config for the repo
+     * @return list<string> human-readable summary of what changed (empty if nothing)
+     */
+    public function run(string $repo, array $desired): array
     {
         $files = (array) ($desired['files'] ?? []);
         if ($files === []) {
-            return;
+            return [];
         }
 
         $defaultBranch = (string) ($this->gh->get("/repos/{$this->owner}/{$repo}")['default_branch'] ?? '');
@@ -56,17 +59,15 @@ final readonly class FileSync
         }
 
         if ($changed === []) {
-            return;
+            return [];
         }
 
-        echo '    > ' . count($changed) . " file(s) drifted, opening PR\n";
         $ref = $this->gh->get("/repos/{$this->owner}/{$repo}/git/ref/heads/{$defaultBranch}");
         $object = (array) ($ref['object'] ?? []);
         $headSha = (string) ($object['sha'] ?? '');
         $this->resetBranch($repo, $headSha);
 
         foreach ($changed as $file) {
-            echo "      ~ {$file['path']}\n";
             $payload = [
                 'message' => "chore: sync {$file['path']} from infrastructure",
                 'content' => base64_encode($file['content']),
@@ -82,6 +83,9 @@ final readonly class FileSync
         }
 
         $this->ensurePullRequest($repo, $defaultBranch);
+
+        $paths = array_map(static fn(array $file): string => $file['path'], $changed);
+        return ['PR        ' . implode(', ', $paths)];
     }
 
     private function resetBranch(string $repo, string $headSha): void

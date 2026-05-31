@@ -109,7 +109,7 @@ final readonly class GitHub
 
     public function delete(string $path): void
     {
-        if ($this->guard('DELETE', $path)) {
+        if ($this->dryRun) {
             return;
         }
         $this->http->request('DELETE', self::BASE . $path)->getStatusCode();
@@ -121,19 +121,10 @@ final readonly class GitHub
      */
     private function write(string $method, string $path, array $body): array
     {
-        if ($this->guard($method, $path)) {
+        if ($this->dryRun) {
             return [];
         }
         return $this->http->request($method, self::BASE . $path, ['json' => $body])->toArray();
-    }
-
-    private function guard(string $method, string $path): bool
-    {
-        if ($this->dryRun) {
-            fwrite(STDERR, "    [dry-run] {$method} {$path}\n");
-            return true;
-        }
-        return false;
     }
 
     private function nextLink(?string $linkHeader): ?string
