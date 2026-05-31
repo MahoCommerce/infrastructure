@@ -91,22 +91,27 @@ foreach ($failed as $repo => $message) {
 exit($failed === [] ? 0 : 1);
 
 /**
- * Every non-archived org repo (so new repos are covered automatically), plus
- * any explicitly configured repo, minus the exclude list.
+ * Every public, non-archived org repo (so new repos are covered automatically),
+ * plus any explicitly configured repo, minus the exclude list. Private and
+ * archived repos are always skipped, even if named in the config.
  *
  * @return list<string>
  */
 function discoverRepos(GitHub $gh, Config $config): array
 {
-    $discovered = [];
+    $public = [];
+    $skip = [];
     foreach ($gh->getAll("/orgs/{$config->owner}/repos", ['type' => 'all']) as $repo) {
-        if (($repo['archived'] ?? false) !== true) {
-            $discovered[] = (string) ($repo['name'] ?? '');
+        $name = (string) ($repo['name'] ?? '');
+        if (($repo['archived'] ?? false) === true || ($repo['private'] ?? false) === true) {
+            $skip[] = $name;
+            continue;
         }
+        $public[] = $name;
     }
 
-    $all = array_unique([...$discovered, ...$config->configuredRepos()]);
+    $all = array_unique([...$public, ...$config->configuredRepos()]);
     sort($all);
 
-    return array_values(array_diff($all, $config->exclude));
+    return array_values(array_diff($all, $config->exclude, $skip));
 }
