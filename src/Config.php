@@ -136,9 +136,15 @@ final readonly class Config
     private function merge(array $base, array $override): array
     {
         foreach ($override as $key => $value) {
-            $base[$key] = in_array($key, ['files', 'settings'], true)
-                ? [...(array) ($base[$key] ?? []), ...(array) $value]
-                : $value;
+            if ($key === 'files') {
+                // A `false` source opts the repo out of a file set by an earlier layer.
+                $files = [...(array) ($base['files'] ?? []), ...(array) $value];
+                $base['files'] = array_filter($files, static fn(mixed $source): bool => $source !== false && $source !== null);
+            } elseif ($key === 'settings') {
+                $base['settings'] = [...(array) ($base['settings'] ?? []), ...(array) $value];
+            } else {
+                $base[$key] = $value;
+            }
         }
         return $base;
     }

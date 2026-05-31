@@ -60,12 +60,14 @@ return [
     ],
 
     // Overrides for a single repo, keyed by repo name. Merged last, so these
-    // win over both defaults and groups.
+    // win over both defaults and groups. A `false` file source opts the repo
+    // out of a default file (it still gets the default settings).
     'repos' => [
-        // 'maho' => [
-        //     'files' => [
-        //         '.github/CODEOWNERS' => 'files/maho-codeowners',
-        //     ],
-        // ],
+        // Starter is meant to be cloned, so it must not carry our sponsor links.
+        'maho-starter' => [
+            'files' => [
+                '.github/FUNDING.yml' => false,
+            ],
+        ],
     ],
 ];
