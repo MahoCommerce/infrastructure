@@ -11,6 +11,7 @@ namespace Maho\Infra;
 
 use Symfony\Component\HttpClient\HttpClient;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
+use Symfony\Contracts\HttpClient\ResponseInterface;
 
 /**
  * Thin GitHub REST wrapper. Just the verbs the reconcilers need,
@@ -50,7 +51,7 @@ final readonly class GitHub
         $query['per_page'] = 100;
 
         while ($url !== null) {
-            $res = $this->http->request('GET', $url, ['query' => $query]);
+            $res = $this->send('GET', $url, ['query' => $query]);
             foreach ($res->toArray() as $item) {
                 $items[] = (array) $item;
             }
@@ -65,7 +66,7 @@ final readonly class GitHub
     /** @return array<array-key, mixed> */
     public function get(string $path): array
     {
-        return $this->http->request('GET', self::BASE . $path)->toArray();
+        return $this->send('GET', self::BASE . $path)->toArray();
     }
 
     /**
@@ -124,7 +125,28 @@ final readonly class GitHub
         if ($this->dryRun) {
             return [];
         }
-        return $this->http->request($method, self::BASE . $path, ['json' => $body])->toArray();
+        return $this->send($method, self::BASE . $path, ['json' => $body])->toArray();
+    }
+
+    /**
+     * Performs the request and, on a 4xx/5xx, throws with GitHub's own error
+     * message (e.g. "Resource not accessible by integration") instead of the
+     * opaque "HTTP 403 returned for URL" the client would otherwise surface.
+     *
+     * @param array<string, mixed> $options
+     */
+    private function send(string $method, string $url, array $options = []): ResponseInterface
+    {
+        $res = $this->http->request($method, $url, $options);
+        $status = $res->getStatusCode();
+        if ($status >= 400) {
+            $decoded = json_decode($res->getContent(false), true);
+            $message = is_array($decoded) && isset($decoded['message'])
+                ? (string) $decoded['message']
+                : 'unexpected response';
+            throw new \RuntimeException("{$method} {$url} -> {$status}: {$message}");
+        }
+        return $res;
     }
 
     private function nextLink(?string $linkHeader): ?string
