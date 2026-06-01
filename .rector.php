@@ -20,9 +20,11 @@ return RectorConfig::configure()
         __DIR__ . '/config',
         __DIR__ . '/sync.php',
     ])
-    ->withPhpSets(
-        php83: true,
-    )
+    // No argument: Rector picks the target PHP version from composer.json
+    // (require.php's lower bound, else config.platform.php), both kept at 8.3 by
+    // the org sync, so the level sets track the declared floor instead of a
+    // hardcoded one that can drift.
+    ->withPhpSets()
     ->withRules([
         CodeQuality\BooleanNot\ReplaceMultipleBooleanNotRector::class,
         CodeQuality\Foreach_\UnusedForeachValueToArrayKeysRector::class,

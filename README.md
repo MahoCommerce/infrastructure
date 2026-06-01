@@ -3,11 +3,11 @@
 A stateless reconciler that keeps every repo in the **MahoCommerce** GitHub org
 in sync with one source of truth. There is no database or state file: each run
 reads live state from the GitHub API, compares it to the desired config, and
-acts only on drift — so it's safe to run repeatedly.
+acts only on drift, so it's safe to run repeatedly.
 
 Two delivery modes:
 
-- **Direct API** for things GitHub has no PR flow for — repo settings, Actions
+- **Direct API** for things GitHub has no PR flow for: repo settings, Actions
   permissions, security features.
 - **Pull requests** for managed files, opened on the `infra-sync` branch and
   never pushed to the default branch, so branch protection and review still apply.
@@ -16,29 +16,37 @@ Two delivery modes:
 
 Applied to every repo in [scope](#scope):
 
-**Repo settings** — patched directly on the repo:
+**Repo settings**, patched directly on the repo:
 
 - Squash merge only (merge commits and rebase merging off)
 - "Always suggest updating branches" on
 - Wikis off
 
-**GitHub Actions** — `/actions/permissions`:
+**GitHub Actions**, via `/actions/permissions`:
 
 - Actions enabled, so CI and the `github-actions` Dependabot updater can run
 
-**Security features** — each on its own endpoint:
+**Security features**, each on its own endpoint:
 
 - Dependency graph **+** Dependabot alerts (the API enables them together;
   there's no way to turn on the graph alone)
 - Dependabot security updates (auto-PRs for dependencies with a published advisory)
 
-**Managed files** — delivered as a pull request on `infra-sync`:
+**Managed files**, delivered as a pull request on `infra-sync`:
 
-- `.github/FUNDING.yml` — sponsor links (skipped on `maho-starter`, which is
+- `.github/FUNDING.yml`: sponsor links (skipped on `maho-starter`, which is
   meant to be cloned)
-- `.github/dependabot.yml` — computed per repo: a `composer` updater only when a
+- `.github/dependabot.yml`, computed per repo: a `composer` updater only when a
   `composer.lock` is committed, a `github-actions` updater only when the repo has
   workflows; weekly schedule
+- `composer.json`, computed per repo to match `maho`'s PHP policy: pins an
+  existing `require.php` floor to `>=8.3` and adds `config.platform.php` (`8.3`)
+  when unset. Edited in place via Composer's `JsonManipulator`, so the diff is
+  only the changed lines; repos without a `composer.json` are skipped
+- `.github/workflows/phpstan.yml`, `.github/workflows/syntax-php.yml`: the PHP
+  version matrix is normalised to match `maho` (`['8.3', '8.4', '8.5']`). Only
+  the bracketed version list is rewritten; existing workflows are never created,
+  only aligned. Lint and pest stay single-version, so they're left untouched
 
 ### Scope
 

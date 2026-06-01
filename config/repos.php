@@ -14,7 +14,12 @@
 
 declare(strict_types=1);
 
+use Maho\Infra\CiMatrix;
 use Maho\Infra\Dependabot;
+use Maho\Infra\PhpConstraint;
+
+// PHP versions the version-sensitive CI checks run against, mirroring maho.
+$phpCiVersions = ['8.3', '8.4', '8.5'];
 
 return [
     'owner' => 'MahoCommerce',
@@ -33,6 +38,15 @@ return [
             // Computed per repo: composer updates only when composer.lock is
             // committed, github-actions only when the repo has workflows.
             '.github/dependabot.yml' => Dependabot::build(...),
+            // Computed per repo: align the PHP version policy with maho. Pin an
+            // existing require.php floor to >=8.3 and lock config.platform.php to
+            // 8.3 when unset. Skips repos without a composer.json.
+            'composer.json' => PhpConstraint::ensure('>=8.3', '8.3'),
+            // Computed per repo: normalise the PHP matrix in the version-sensitive
+            // workflows to match maho. Only existing workflows are touched (never
+            // created); lint/pest stay single-version and aren't listed here.
+            '.github/workflows/phpstan.yml' => CiMatrix::normalize('.github/workflows/phpstan.yml', $phpCiVersions),
+            '.github/workflows/syntax-php.yml' => CiMatrix::normalize('.github/workflows/syntax-php.yml', $phpCiVersions),
         ],
         // Repo settings, patched directly (GitHub has no PR flow for these).
         'settings' => [
@@ -48,7 +62,7 @@ return [
             'enabled' => true,
         ],
         // Security features (separate endpoints again). Enabling vulnerability
-        // alerts also enables the dependency graph — the API can't do one
+        // alerts also enables the dependency graph; the API can't do one
         // without the other (github/community discussion #180308).
         'security' => [
             'vulnerability_alerts' => true,
@@ -65,7 +79,7 @@ return [
         // Language packs are generated artifacts: maho-l10n is the single source
         // of record and pushes their entire contents (including .github/FUNDING.yml,
         // fanned out from l10n's own copy). So infra must NOT sync files into them
-        // — opt them out of the default files — but still holds them to org
+        // (opt them out of the default files) but still holds them to org
         // settings/security standards and makes them read-only (no issues/wiki/
         // projects). PRs can't be disabled via the API; with no human write access
         // the packs are effectively read-only.
@@ -74,6 +88,9 @@ return [
             'files' => [
                 '.github/FUNDING.yml' => false,
                 '.github/dependabot.yml' => false,
+                'composer.json' => false,
+                '.github/workflows/phpstan.yml' => false,
+                '.github/workflows/syntax-php.yml' => false,
             ],
             'settings' => [
                 'has_issues' => false,

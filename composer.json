@@ -5,6 +5,7 @@
     "license": "MIT",
     "require": {
         "php": ">=8.3",
+        "composer/composer": "^2.10",
         "symfony/http-client": "^7.4"
     },
     "require-dev": {
