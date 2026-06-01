@@ -125,9 +125,9 @@ final readonly class Config
     }
 
     /**
-     * Merge desired-state layers. Associative maps (`files`, `settings`) merge
-     * key-by-key so a later layer adds/overrides entries; everything else is
-     * replaced wholesale.
+     * Merge desired-state layers. Associative maps (`files`, `settings`,
+     * `actions`) merge key-by-key so a later layer adds/overrides entries;
+     * everything else is replaced wholesale.
      *
      * @param array<array-key, mixed> $base
      * @param array<array-key, mixed> $override
@@ -140,8 +140,8 @@ final readonly class Config
                 // A `false` source opts the repo out of a file set by an earlier layer.
                 $files = [...(array) ($base['files'] ?? []), ...(array) $value];
                 $base['files'] = array_filter($files, static fn(mixed $source): bool => $source !== false && $source !== null);
-            } elseif ($key === 'settings') {
-                $base['settings'] = [...(array) ($base['settings'] ?? []), ...(array) $value];
+            } elseif ($key === 'settings' || $key === 'actions') {
+                $base[$key] = [...(array) ($base[$key] ?? []), ...(array) $value];
             } else {
                 $base[$key] = $value;
             }

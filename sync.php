@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 use Maho\Infra\Config;
 use Maho\Infra\GitHub;
+use Maho\Infra\Sync\ActionsSync;
 use Maho\Infra\Sync\FileSync;
 use Maho\Infra\Sync\SettingsSync;
 
@@ -36,6 +37,7 @@ $gh = new GitHub($token, dryRun: $dryRun);
 
 $reconcilers = [
     new SettingsSync($gh, $config->owner),
+    new ActionsSync($gh, $config->owner),
     new FileSync($gh, $config->owner, __DIR__ . '/config'),
 ];
 

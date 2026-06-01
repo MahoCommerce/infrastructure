@@ -14,6 +14,8 @@
 
 declare(strict_types=1);
 
+use Maho\Infra\Dependabot;
+
 return [
     'owner' => 'MahoCommerce',
 
@@ -28,6 +30,9 @@ return [
     'defaults' => [
         'files' => [
             '.github/FUNDING.yml' => 'files/funding.yml',
+            // Computed per repo: composer updates only when composer.lock is
+            // committed, github-actions only when the repo has workflows.
+            '.github/dependabot.yml' => Dependabot::build(...),
         ],
         // Repo settings, patched directly (GitHub has no PR flow for these).
         'settings' => [
@@ -36,6 +41,11 @@ return [
             'allow_rebase_merge' => false,
             'allow_update_branch' => true,
             'has_wiki' => false,
+        ],
+        // GitHub Actions permissions (separate endpoint from settings). Keeps
+        // CI workflows and the github-actions Dependabot updater able to run.
+        'actions' => [
+            'enabled' => true,
         ],
     ],
 

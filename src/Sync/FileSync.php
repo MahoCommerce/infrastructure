@@ -58,7 +58,12 @@ final readonly class FileSync
         $staged = [];     // files already correct on the branch (PR in flight)
         foreach ($files as $path => $source) {
             $path = (string) $path;
-            $wanted = $this->readSource((string) $source);
+            $wanted = $this->resolveSource($source, $repo);
+
+            // A computed source can opt this repo out of the file entirely.
+            if ($wanted === null) {
+                continue;
+            }
 
             // Already on the default branch -> nothing to sync for this file.
             [$defStatus, $defBody] = $this->contents($repo, $path, $defaultBranch);
@@ -165,6 +170,20 @@ final readonly class FileSync
             'body' => "Automated sync from [infrastructure](https://github.com/{$this->owner}/infrastructure). Review and merge.",
         ]);
         return true;
+    }
+
+    /**
+     * Resolve a managed-file source to its desired content. A string names a
+     * file under `config/`; a closure computes the content from live repo state
+     * (see {@see \Maho\Infra\Dependabot}) and may return `null` to skip the file.
+     */
+    private function resolveSource(mixed $source, string $repo): ?string
+    {
+        if ($source instanceof \Closure) {
+            $content = $source($this->gh, $this->owner, $repo);
+            return $content === null ? null : (string) $content;
+        }
+        return $this->readSource((string) $source);
     }
 
     private function readSource(string $source): string
