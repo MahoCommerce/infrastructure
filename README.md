@@ -46,6 +46,14 @@ Every **public, non-archived** org repo is synced (new repos are picked up
 automatically), plus any repo named in config, minus the `exclude` list.
 **Private and archived repos are always skipped, even if named in config.**
 
+### Not synced (manual)
+
+- **Sponsorships feature toggle** (Settings → General → Features → Sponsorships).
+  We sync `.github/FUNDING.yml` (the sponsor *links*), but the checkbox that
+  surfaces the Sponsor button has no REST or GraphQL API, so it must be ticked
+  by hand per repo. Tracked upstream in
+  [community discussion #179964](https://github.com/orgs/community/discussions/179964).
+
 ## How it works
 
 - `config/repos.php` is the source of truth. It defines `defaults`, named
