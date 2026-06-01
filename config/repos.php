@@ -62,12 +62,25 @@ return [
     // `repos` entries match by exact name, by glob (`maho-language-*`), or by
     // regex when slash-delimited (`/^module-(mollie|revolut)$/`).
     'groups' => [
-        // 'language-packs' => [
-        //     'repos' => ['maho-language-*'],
-        //     'files' => [
-        //         '.github/workflows/sync-translations.yml' => 'files/sync-translations.yml',
-        //     ],
-        // ],
+        // Language packs are generated artifacts: maho-l10n is the single source
+        // of record and pushes their entire contents (including .github/FUNDING.yml,
+        // fanned out from l10n's own copy). So infra must NOT sync files into them
+        // — opt them out of the default files — but still holds them to org
+        // settings/security standards and makes them read-only (no issues/wiki/
+        // projects). PRs can't be disabled via the API; with no human write access
+        // the packs are effectively read-only.
+        'language-packs' => [
+            'repos' => ['maho-language-*'],
+            'files' => [
+                '.github/FUNDING.yml' => false,
+                '.github/dependabot.yml' => false,
+            ],
+            'settings' => [
+                'has_issues' => false,
+                'has_wiki' => false,
+                'has_projects' => false,
+            ],
+        ],
         // 'payment-modules' => [
         //     'repos' => ['module-mollie', 'module-braintree', 'module-revolut'],
         //     'files' => [
