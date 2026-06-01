@@ -47,6 +47,13 @@ return [
         'actions' => [
             'enabled' => true,
         ],
+        // Security features (separate endpoints again). Enabling vulnerability
+        // alerts also enables the dependency graph — the API can't do one
+        // without the other (github/community discussion #180308).
+        'security' => [
+            'vulnerability_alerts' => true,
+            'automated_security_fixes' => true,
+        ],
     ],
 
     // Files for a named subset of repos. A group's `files` merge onto the

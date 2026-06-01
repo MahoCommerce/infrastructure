@@ -82,6 +82,15 @@ final readonly class GitHub
     }
 
     /**
+     * GET returning only the HTTP status code, so it's safe on endpoints that
+     * answer with an empty body (e.g. vulnerability-alerts: 204 on / 404 off).
+     */
+    public function status(string $path): int
+    {
+        return $this->http->request('GET', self::BASE . $path)->getStatusCode();
+    }
+
+    /**
      * @param array<string, mixed> $body
      * @return array<array-key, mixed>
      */
@@ -125,7 +134,11 @@ final readonly class GitHub
         if ($this->dryRun) {
             return [];
         }
-        return $this->send($method, self::BASE . $path, ['json' => $body])->toArray();
+        // Some toggle endpoints take no body and answer 204 No Content, so only
+        // send a JSON payload when there is one and only decode a non-empty body.
+        $res = $this->send($method, self::BASE . $path, $body === [] ? [] : ['json' => $body]);
+        $content = $res->getContent();
+        return $content === '' ? [] : (array) json_decode($content, true);
     }
 
     /**

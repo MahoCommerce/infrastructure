@@ -11,6 +11,7 @@ use Maho\Infra\Config;
 use Maho\Infra\GitHub;
 use Maho\Infra\Sync\ActionsSync;
 use Maho\Infra\Sync\FileSync;
+use Maho\Infra\Sync\SecuritySync;
 use Maho\Infra\Sync\SettingsSync;
 
 require __DIR__ . '/vendor/autoload.php';
@@ -38,6 +39,7 @@ $gh = new GitHub($token, dryRun: $dryRun);
 $reconcilers = [
     new SettingsSync($gh, $config->owner),
     new ActionsSync($gh, $config->owner),
+    new SecuritySync($gh, $config->owner),
     new FileSync($gh, $config->owner, __DIR__ . '/config'),
 ];
 
