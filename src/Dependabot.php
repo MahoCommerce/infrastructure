@@ -47,7 +47,10 @@ final readonly class Dependabot
             . implode("\n", $blocks) . "\n";
     }
 
-    /** One updater block, mirroring the format in MahoCommerce/maho. */
+    /**
+     * One updater block. A single catch-all group batches every dependency in
+     * the ecosystem into one PR per run, instead of one PR per dependency.
+     */
     private static function ecosystem(string $name): string
     {
         return <<<YAML
@@ -55,6 +58,10 @@ final readonly class Dependabot
                 directory: "/"
                 schedule:
                   interval: "weekly"
+                groups:
+                  all-dependencies:
+                    patterns:
+                      - "*"
             YAML;
     }
 
