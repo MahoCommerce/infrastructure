@@ -12,8 +12,7 @@ namespace Maho\Infra;
 use Composer\Json\JsonManipulator;
 
 /**
- * Aligns a repo's `composer.json` PHP version policy with the `maho`
- * source-of-truth repo, so every PHP project in the org agrees on the minimum:
+ * Aligns a repo's `composer.json` with org policy:
  *
  *  - **`require.php`** is pinned to the canonical constraint (e.g. `">=8.3"`),
  *    but only when the repo already declares one; we never invent a floor for a
@@ -21,6 +20,9 @@ use Composer\Json\JsonManipulator;
  *  - **`config.platform.php`** is added (e.g. `"8.3"`) when absent, so Composer
  *    resolves dependencies against that PHP version regardless of the CI/host
  *    runtime. An existing value is left untouched.
+ *  - **`require-dev`** entries are ensured when a baseline is passed (e.g. the
+ *    lint/test tooling every module needs). Existing entries are left as-is, so
+ *    a repo can hold a tighter constraint; only missing ones are added.
  *
  * The content is computed from the repo's live `composer.json` (it can't be a
  * static file, every repo has its own dependencies). Edits go through Composer's
@@ -30,26 +32,32 @@ use Composer\Json\JsonManipulator;
  * Used as a computed file source (see {@see Sync\FileSync}); returns `null` when
  * there's no `composer.json` or nothing drifted.
  */
-final readonly class PhpConstraint
+final readonly class ComposerPolicy
 {
     /**
      * Build a computed file source that pins `require.php` to `$constraint`
-     * (e.g. `">=8.3"`) and ensures `config.platform.php` is `$platform`
-     * (e.g. `"8.3"`). The returned closure matches the signature FileSync
-     * expects for a managed-file source.
+     * (e.g. `">=8.3"`), ensures `config.platform.php` is `$platform` (e.g.
+     * `"8.3"`), and adds any missing `$requireDev` entries (package => version
+     * constraint). The returned closure matches the signature FileSync expects.
+     *
+     * @param array<string, string> $requireDev
      */
-    public static function ensure(string $constraint, string $platform): \Closure
+    public static function ensure(string $constraint, string $platform, array $requireDev = []): \Closure
     {
         return static fn(GitHub $gh, string $owner, string $repo): ?string
-            => self::build($gh, $owner, $repo, $constraint, $platform);
+            => self::build($gh, $owner, $repo, $constraint, $platform, $requireDev);
     }
 
+    /**
+     * @param array<string, string> $requireDev
+     */
     private static function build(
         GitHub $gh,
         string $owner,
         string $repo,
         string $constraint,
         string $platform,
+        array $requireDev,
     ): ?string {
         [$status, $body] = $gh->tryGet("/repos/{$owner}/{$repo}/contents/composer.json");
         if ($status !== 200) {
@@ -77,6 +85,13 @@ final readonly class PhpConstraint
         // deliberately set a different value keeps it.
         if (!self::has($decoded, ['config', 'platform', 'php'])) {
             $manipulator->addConfigSetting('platform.php', $platform);
+        }
+
+        // Add any missing baseline dev tooling, leaving existing entries alone.
+        foreach ($requireDev as $package => $version) {
+            if (!self::has($decoded, ['require-dev', $package])) {
+                $manipulator->addLink('require-dev', $package, $version);
+            }
         }
 
         $result = $manipulator->getContents();
