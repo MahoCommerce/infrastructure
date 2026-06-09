@@ -17,4 +17,4 @@ parameters:
     paths:
         - src
         - sync.php
-        - config
+        - config.php
