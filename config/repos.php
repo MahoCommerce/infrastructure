@@ -98,12 +98,22 @@ return [
                 'has_projects' => false,
             ],
         ],
-        // 'payment-modules' => [
-        //     'repos' => ['module-mollie', 'module-braintree', 'module-revolut'],
-        //     'files' => [
-        //         '.github/workflows/ci.yml' => 'files/module-ci.yml',
-        //     ],
-        // ],
+        // Modules consolidate their separate php-cs-fixer.yml and rector.yml
+        // CI workflows into a single lint.yml that runs both tools via
+        // vendor/bin. `replaces` retires the two old workflows in the same PR
+        // wherever they still exist. phpstan stays in its own phpstan.yml.
+        'php-modules' => [
+            'repos' => ['module-*'],
+            'files' => [
+                '.github/workflows/lint.yml' => 'files/lint.yml',
+            ],
+            'replaces' => [
+                '.github/workflows/lint.yml' => [
+                    '.github/workflows/php-cs-fixer.yml',
+                    '.github/workflows/rector.yml',
+                ],
+            ],
+        ],
     ],
 
     // Overrides for a single repo, keyed by repo name. Merged last, so these
