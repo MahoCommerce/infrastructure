@@ -1,12 +1,5 @@
 <?php
 
-/**
- * SPDX-FileCopyrightText: 2026 Maho <https://mahocommerce.com>
- * SPDX-License-Identifier: MIT
- */
-
-declare(strict_types=1);
-
 $config = new PhpCsFixer\Config();
 return $config
     ->setRiskyAllowed(true)
@@ -31,9 +24,19 @@ return $config
     ])
     ->setFinder(
         PhpCsFixer\Finder::create()
-            ->in([__DIR__ . '/src', __DIR__ . '/config'])
-            ->append([__DIR__ . '/sync.php'])
+            // Same canonical list as the maho repo; only the dirs that exist in
+            // this repo are scanned, so the one config works for app-only modules.
+            ->in(array_values(array_filter([
+                __DIR__ . '/app',
+                __DIR__ . '/lib',
+                __DIR__ . '/public',
+                __DIR__ . '/tests',
+                __DIR__ . '/src',
+            ], 'is_dir')))
+            // Root-level entry points (e.g. the infra tool's sync.php / config.php).
+            // glob skips dotfiles, so these very config files aren't included.
+            ->append(glob(__DIR__ . '/*.php') ?: [])
             ->name('*.php')
             ->ignoreDotFiles(true)
-            ->ignoreVCS(true),
+            ->ignoreVCS(true)
     );

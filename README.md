@@ -64,10 +64,16 @@ automatically), plus any repo named in config, minus the `exclude` list.
 
 ## How it works
 
-- `config/repos.php` is the source of truth. It defines `defaults`, named
+- `config.php` (repo root) is the source of truth. It defines `defaults`, named
   `groups` of repos, and per-repo overrides. Layers merge in that order, so a
   group adds to the defaults rather than replacing them.
-- `config/files/` holds the actual file contents that get synced into repos.
+- There's no separate templates directory. The static files synced into repos
+  (`.php-cs-fixer.php`, `.rector.php`, `.github/workflows/lint.yml`,
+  `.github/FUNDING.yml`) are infra's *own* root files, so the controller
+  dogfoods exactly what it ships. `FileSync`'s base is the repo root and each
+  managed-file source is named after the path it writes to. maho keeps its own
+  larger `.php-cs-fixer.php`/`.rector.php` (with the Varien→Maho migration) and
+  is not synced these.
 - `src/Sync/*` are the reconcilers (`SettingsSync`, `ActionsSync`,
   `SecuritySync`, `FileSync`). Each is idempotent: it reads current state, acts
   only on drift, and is safe to run repeatedly.

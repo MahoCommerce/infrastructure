@@ -34,7 +34,7 @@ return [
     // Applied to every non-archived org repo.
     'defaults' => [
         'files' => [
-            '.github/FUNDING.yml' => 'files/funding.yml',
+            '.github/FUNDING.yml' => '.github/FUNDING.yml',
             // Computed per repo: composer updates only when composer.lock is
             // committed, github-actions only when the repo has workflows.
             '.github/dependabot.yml' => Dependabot::build(...),
@@ -107,9 +107,9 @@ return [
         'php-modules' => [
             'repos' => ['module-*'],
             'files' => [
-                '.github/workflows/lint.yml' => 'files/lint.yml',
-                '.php-cs-fixer.php' => 'files/php-cs-fixer.php.dist',
-                '.rector.php' => 'files/rector.php.dist',
+                '.github/workflows/lint.yml' => '.github/workflows/lint.yml',
+                '.php-cs-fixer.php' => '.php-cs-fixer.php',
+                '.rector.php' => '.rector.php',
                 // Override the default PHP-only policy: modules also need the
                 // lint/test tooling in require-dev (the rector config resolves
                 // Maho\Rector\* from mahocommerce/maho).

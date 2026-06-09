@@ -32,7 +32,7 @@ if ($token === '') {
 }
 
 /** @var array<string, mixed> $raw */
-$raw = require __DIR__ . '/config/repos.php';
+$raw = require __DIR__ . '/config.php';
 $config = new Config($raw);
 $gh = new GitHub($token, dryRun: $dryRun);
 
@@ -40,7 +40,9 @@ $reconcilers = [
     new SettingsSync($gh, $config->owner),
     new ActionsSync($gh, $config->owner),
     new SecuritySync($gh, $config->owner),
-    new FileSync($gh, $config->owner, __DIR__ . '/config'),
+    // Base is the repo root: managed-file sources are infra's own files, so the
+    // controller dogfoods exactly what it distributes (no separate templates dir).
+    new FileSync($gh, $config->owner, __DIR__),
 ];
 
 $repos = $only !== null ? [$only] : discoverRepos($gh, $config);

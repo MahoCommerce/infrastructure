@@ -1,10 +1,5 @@
 <?php
 
-/**
- * SPDX-FileCopyrightText: 2026 Maho <https://mahocommerce.com>
- * SPDX-License-Identifier: MIT
- */
-
 declare(strict_types=1);
 
 use Rector\CodeQuality\Rector as CodeQuality;
@@ -14,16 +9,25 @@ use Rector\DeadCode\Rector as DeadCode;
 use Rector\EarlyReturn\Rector as EarlyReturn;
 use Rector\TypeDeclaration\Rector as TypeDeclaration;
 
+// Shared by every repo that consumes the org baseline. Only standard Rector
+// rules, so it needs no extra dependency: maho's own .rector.php (with the
+// Maho\Rector\* rules and the Varien->Maho migration) stays in maho and is not
+// synced. Only the paths that exist in a given repo are scanned, so the one
+// config works for app-only modules and the infra tool's src/ alike.
 return RectorConfig::configure()
-    ->withPaths([
-        __DIR__ . '/src',
-        __DIR__ . '/config',
-        __DIR__ . '/sync.php',
-    ])
-    // No argument: Rector picks the target PHP version from composer.json
-    // (require.php's lower bound, else config.platform.php), both kept at 8.3 by
-    // the org sync, so the level sets track the declared floor instead of a
-    // hardcoded one that can drift.
+    ->withPaths(array_values(array_merge(
+        array_filter([
+            __DIR__ . '/app',
+            __DIR__ . '/lib',
+            __DIR__ . '/public',
+            __DIR__ . '/src',
+        ], 'is_dir'),
+        // Root-level entry points (e.g. the infra tool's sync.php / config.php).
+        // glob skips dotfiles, so this very config file isn't included.
+        glob(__DIR__ . '/*.php') ?: [],
+    )))
+    // No argument: Rector reads the target PHP version from composer.json
+    // (require.php's floor, else config.platform.php), kept at 8.3 by the sync.
     ->withPhpSets()
     ->withRules([
         CodeQuality\BooleanNot\ReplaceMultipleBooleanNotRector::class,
@@ -45,12 +49,18 @@ return RectorConfig::configure()
         EarlyReturn\If_\ChangeNestedIfsToEarlyReturnRector::class,
         EarlyReturn\If_\RemoveAlwaysElseRector::class,
         Rector\CodingStyle\Rector\FuncCall\ConsistentImplodeRector::class,
+        Rector\Php71\Rector\List_\ListToArrayDestructRector::class,
+        Rector\Php74\Rector\Assign\NullCoalescingOperatorRector::class,
         Rector\Php80\Rector\Class_\StringableForToStringRector::class,
+        Rector\Php80\Rector\ClassConstFetch\ClassOnThisVariableObjectRector::class,
+        Rector\Php80\Rector\FuncCall\ClassOnObjectRector::class,
         Rector\Php80\Rector\Switch_\ChangeSwitchToMatchRector::class,
         Rector\Php83\Rector\ClassMethod\AddOverrideAttributeToOverriddenMethodsRector::class,
         TypeDeclaration\ClassMethod\ReturnNeverTypeRector::class,
         TypeDeclaration\StmtsAwareInterface\SafeDeclareStrictTypesRector::class,
     ])
     ->withConfiguredRule(Rector\Php82\Rector\Param\AddSensitiveParameterAttributeRector::class, [
-        'sensitive_parameters' => ['token', 'apiKey', 'password'],
+        'sensitive_parameters' => [
+            'token', 'apiKey', 'email', 'useremail', 'username', 'password',
+        ],
     ]);
