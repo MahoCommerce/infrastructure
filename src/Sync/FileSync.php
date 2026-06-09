@@ -109,7 +109,8 @@ final readonly class FileSync
             return $deletedLeftover ? ['branch    deleted ' . self::BRANCH . ' (PR merged)'] : [];
         }
 
-        if ($toCommit !== [] || $toDelete !== []) {
+        $mutated = $toCommit !== [] || $toDelete !== [];
+        if ($mutated) {
             if (!$branchExists) {
                 $this->gh->post("/repos/{$this->owner}/{$repo}/git/refs", [
                     'ref' => 'refs/heads/' . self::BRANCH,
@@ -146,8 +147,9 @@ final readonly class FileSync
 
         $createdPr = $this->ensurePullRequest($repo, $defaultBranch);
 
-        // Branch was already correct and the PR was already open: truly a no-op.
-        if ($toCommit === [] && $toDelete === [] && !$createdPr) {
+        // Only already-staged files with an already-open PR: nothing happened
+        // this run, so there's nothing to report.
+        if (!$mutated && !$createdPr) {
             return [];
         }
 
