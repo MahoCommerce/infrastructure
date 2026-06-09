@@ -117,12 +117,22 @@ final readonly class GitHub
         return $this->write('PUT', $path, $body);
     }
 
-    public function delete(string $path): void
+    /**
+     * Ref deletes (e.g. a branch) take no body and are fire-and-forget; contents
+     * deletes need {message, sha, branch} and surface GitHub's error on failure.
+     *
+     * @param array<string, mixed> $body
+     */
+    public function delete(string $path, array $body = []): void
     {
         if ($this->dryRun) {
             return;
         }
-        $this->http->request('DELETE', self::BASE . $path)->getStatusCode();
+        if ($body === []) {
+            $this->http->request('DELETE', self::BASE . $path)->getStatusCode();
+            return;
+        }
+        $this->send('DELETE', self::BASE . $path, ['json' => $body]);
     }
 
     /**

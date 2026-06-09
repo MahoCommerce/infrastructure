@@ -19,6 +19,11 @@ use Maho\Infra\GitHub;
  * to do) and then against the open PR branch (already staged -> leave it alone),
  * so a run only ever pushes content that isn't there yet. A repo whose PR is
  * already correct is left completely untouched.
+ *
+ * A managed file may also supersede others via the `replaces` map (path ->
+ * paths it replaces). When such a file is synced to a repo, the superseded
+ * files are deleted in the same PR if present, so e.g. a consolidated lint.yml
+ * can retire the per-tool workflows it subsumes.
  */
 final readonly class FileSync
 {
@@ -54,46 +59,57 @@ final readonly class FileSync
             $deletedLeftover = true;
         }
 
+        $replaces = (array) ($desired['replaces'] ?? []);
+
         $toCommit = [];   // files whose content must be written to the branch
         $staged = [];     // files already correct on the branch (PR in flight)
+        $toDelete = [];   // superseded files to remove from the target repo
         foreach ($files as $path => $source) {
             $path = (string) $path;
             $wanted = $this->resolveSource($source, $repo);
 
-            // A computed source can opt this repo out of the file entirely.
+            // A computed source can opt this repo out of the file entirely, and
+            // so out of removing anything it would otherwise supersede.
             if ($wanted === null) {
                 continue;
             }
 
-            // Already on the default branch -> nothing to sync for this file.
+            // Write the managed file unless it's already on the default branch.
             [$defStatus, $defBody] = $this->contents($repo, $path, $defaultBranch);
-            if ($defStatus === 200 && base64_decode((string) ($defBody['content'] ?? '')) === $wanted) {
-                continue;
-            }
-
-            // Must land via PR. Skip the write if the branch already carries it.
-            if ($branchExists) {
-                [$brStatus, $brBody] = $this->contents($repo, $path, self::BRANCH);
-                if ($brStatus === 200 && base64_decode((string) ($brBody['content'] ?? '')) === $wanted) {
-                    $staged[] = $path;
-                    continue;
+            $onDefault = $defStatus === 200 && base64_decode((string) ($defBody['content'] ?? '')) === $wanted;
+            if (!$onDefault) {
+                if ($branchExists) {
+                    // Must land via PR. Skip the write if the branch has it.
+                    [$brStatus, $brBody] = $this->contents($repo, $path, self::BRANCH);
+                    if ($brStatus === 200 && base64_decode((string) ($brBody['content'] ?? '')) === $wanted) {
+                        $staged[] = $path;
+                    } else {
+                        $sha = ($brStatus === 200 && isset($brBody['sha'])) ? (string) $brBody['sha'] : null;
+                        $toCommit[] = ['path' => $path, 'content' => $wanted, 'sha' => $sha];
+                    }
+                } else {
+                    // A fresh branch is cut from the default HEAD, so the blob
+                    // there is the one this write would replace.
+                    $sha = ($defStatus === 200 && isset($defBody['sha'])) ? (string) $defBody['sha'] : null;
+                    $toCommit[] = ['path' => $path, 'content' => $wanted, 'sha' => $sha];
                 }
-                $sha = ($brStatus === 200 && isset($brBody['sha'])) ? (string) $brBody['sha'] : null;
-            } else {
-                // A fresh branch is cut from the default HEAD, so the blob there
-                // is the one this write would replace.
-                $sha = ($defStatus === 200 && isset($defBody['sha'])) ? (string) $defBody['sha'] : null;
             }
 
-            $toCommit[] = ['path' => $path, 'content' => $wanted, 'sha' => $sha];
+            // Retire any files this one supersedes, while it's synced here.
+            foreach ((array) ($replaces[$path] ?? []) as $obsolete) {
+                $deletion = $this->planDeletion($repo, (string) $obsolete, $defaultBranch, $branchExists);
+                if ($deletion !== null) {
+                    $toDelete[] = $deletion;
+                }
+            }
         }
 
         // Nothing drifted from the default branch at all -> no branch, no PR.
-        if ($toCommit === [] && $staged === []) {
+        if ($toCommit === [] && $staged === [] && $toDelete === []) {
             return $deletedLeftover ? ['branch    deleted ' . self::BRANCH . ' (PR merged)'] : [];
         }
 
-        if ($toCommit !== []) {
+        if ($toCommit !== [] || $toDelete !== []) {
             if (!$branchExists) {
                 $this->gh->post("/repos/{$this->owner}/{$repo}/git/refs", [
                     'ref' => 'refs/heads/' . self::BRANCH,
@@ -115,17 +131,48 @@ final readonly class FileSync
                     $payload,
                 );
             }
+
+            foreach ($toDelete as $file) {
+                $this->gh->delete(
+                    "/repos/{$this->owner}/{$repo}/contents/" . $this->encodePath($file['path']),
+                    [
+                        'message' => "chore: remove {$file['path']} (superseded) from infrastructure",
+                        'sha' => $file['sha'],
+                        'branch' => self::BRANCH,
+                    ],
+                );
+            }
         }
 
         $createdPr = $this->ensurePullRequest($repo, $defaultBranch);
 
         // Branch was already correct and the PR was already open: truly a no-op.
-        if ($toCommit === [] && !$createdPr) {
+        if ($toCommit === [] && $toDelete === [] && !$createdPr) {
             return [];
         }
 
-        $paths = [...array_map(static fn(array $file): string => $file['path'], $toCommit), ...$staged];
+        $paths = [
+            ...array_map(static fn(array $file): string => $file['path'], $toCommit),
+            ...$staged,
+            ...array_map(static fn(array $file): string => '-' . $file['path'], $toDelete),
+        ];
         return ['PR        ' . implode(', ', $paths)];
+    }
+
+    /**
+     * A superseded file to remove, or null when it isn't present. The blob is
+     * read from the branch we'll commit to: the existing sync branch, or the
+     * default branch when a fresh one is about to be cut from its HEAD.
+     *
+     * @return array{path: string, sha: string}|null
+     */
+    private function planDeletion(string $repo, string $path, string $defaultBranch, bool $branchExists): ?array
+    {
+        [$status, $body] = $this->contents($repo, $path, $branchExists ? self::BRANCH : $defaultBranch);
+        if ($status !== 200 || !isset($body['sha'])) {
+            return null;
+        }
+        return ['path' => $path, 'sha' => (string) $body['sha']];
     }
 
     private function branchExists(string $repo): bool
