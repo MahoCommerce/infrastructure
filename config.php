@@ -142,5 +142,18 @@ return [
                 '.github/FUNDING.yml' => false,
             ],
         ],
+        // Legacy compat shim: it deliberately ships old Varien_Crypt code to
+        // decrypt M1 mcrypt data under modern (libsodium) maho. The module lint
+        // baseline doesn't apply (rector/cs-fixer must not modernise frozen
+        // crypto code, and pulling mahocommerce/maho into require-dev breaks its
+        // install), so opt out of it and keep only the PHP-only composer policy.
+        'module-mcrypt-compat' => [
+            'files' => [
+                '.github/workflows/lint.yml' => false,
+                '.php-cs-fixer.php' => false,
+                '.rector.php' => false,
+                'composer.json' => ComposerPolicy::ensure('>=8.3', '8.3'),
+            ],
+        ],
     ],
 ];
