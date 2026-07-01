@@ -32,6 +32,12 @@ Applied to every repo in [scope](#scope):
   there's no way to turn on the graph alone)
 - Dependabot security updates (auto-PRs for dependencies with a published advisory)
 
+**Labels**, patched directly via the labels API (no PR flow):
+
+- `✨ ai-assisted`: applied to pull requests developed with AI help. It pairs
+  with the `ai-assisted-note.yml` workflow below, which is inert without the
+  label, so the two are synced together (color/description reconciled on drift)
+
 **Managed files**, delivered as a pull request on `infra-sync`:
 
 - `.github/FUNDING.yml`: sponsor links (skipped on `maho-starter`, which is
@@ -47,6 +53,9 @@ Applied to every repo in [scope](#scope):
   version matrix is normalised to match `maho` (`['8.3', '8.4', '8.5']`). Only
   the bracketed version list is rewritten; existing workflows are never created,
   only aligned. Lint and pest stay single-version, so they're left untouched
+- `.github/workflows/ai-assisted-note.yml`: appends a GenAI transparency note to
+  a PR's body when the `✨ ai-assisted` label (above) is added, and strips it when
+  removed. Synced verbatim from infra's own copy
 
 ### Scope
 
@@ -69,14 +78,15 @@ automatically), plus any repo named in config, minus the `exclude` list.
   group adds to the defaults rather than replacing them.
 - There's no separate templates directory. The static files synced into repos
   (`.php-cs-fixer.php`, `.rector.php`, `.github/workflows/lint.yml`,
-  `.github/FUNDING.yml`) are infra's *own* root files, so the controller
+  `.github/workflows/ai-assisted-note.yml`, `.github/FUNDING.yml`) are infra's
+  *own* root files, so the controller
   dogfoods exactly what it ships. `FileSync`'s base is the repo root and each
   managed-file source is named after the path it writes to. maho keeps its own
   larger `.php-cs-fixer.php`/`.rector.php` (with the Varien→Maho migration) and
   is not synced these.
 - `src/Sync/*` are the reconcilers (`SettingsSync`, `ActionsSync`,
-  `SecuritySync`, `FileSync`). Each is idempotent: it reads current state, acts
-  only on drift, and is safe to run repeatedly.
+  `SecuritySync`, `LabelSync`, `FileSync`). Each is idempotent: it reads current
+  state, acts only on drift, and is safe to run repeatedly.
 - `sync.php` resolves the effective config per repo and runs every reconciler.
 
 ## Run locally

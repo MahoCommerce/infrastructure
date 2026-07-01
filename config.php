@@ -47,6 +47,17 @@ return [
             // created); lint/pest stay single-version and aren't listed here.
             '.github/workflows/phpstan.yml' => CiMatrix::normalize('.github/workflows/phpstan.yml', $phpCiVersions),
             '.github/workflows/syntax-php.yml' => CiMatrix::normalize('.github/workflows/syntax-php.yml', $phpCiVersions),
+            // Flags AI-assisted PRs with a GenAI transparency note when the
+            // `✨ ai-assisted` label (below) is applied.
+            '.github/workflows/ai-assisted-note.yml' => '.github/workflows/ai-assisted-note.yml',
+        ],
+        // Issue/PR labels, keyed by name. The ai-assisted-note workflow above is
+        // inert without this label, so both are synced together.
+        'labels' => [
+            '✨ ai-assisted' => [
+                'color' => 'A371F7',
+                'description' => 'Developed with the help of AI',
+            ],
         ],
         // Repo settings, patched directly (GitHub has no PR flow for these).
         'settings' => [
