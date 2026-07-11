@@ -102,6 +102,12 @@ return [
                 'composer.json' => false,
                 '.github/workflows/phpstan.yml' => false,
                 '.github/workflows/syntax-php.yml' => false,
+                '.github/workflows/ai-assisted-note.yml' => false,
+            ],
+            // No human PRs land here either, so the AI-assisted label that
+            // pairs with the workflow above is pointless too.
+            'labels' => [
+                '✨ ai-assisted' => false,
             ],
             'settings' => [
                 'has_issues' => false,
