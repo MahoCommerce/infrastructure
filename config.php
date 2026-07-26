@@ -28,7 +28,6 @@ return [
     'exclude' => [
         'infrastructure',
         'sboms',
-        'icons',
     ],
 
     // Applied to every non-archived org repo.
@@ -153,6 +152,14 @@ return [
     // win over both defaults and groups. A `false` file source opts the repo
     // out of a default file (it still gets the default settings).
     'repos' => [
+        // Icons is a pure SVG distribution package: no PHP code, no dependencies,
+        // so the composer PHP policy has nothing to police there. The PHP CI
+        // matrix files don't exist in the repo, so those syncs already no-op.
+        'icons' => [
+            'files' => [
+                'composer.json' => false,
+            ],
+        ],
         // Starter is meant to be cloned, so it must not carry our sponsor links.
         'maho-starter' => [
             'files' => [
