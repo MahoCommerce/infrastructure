@@ -31,7 +31,6 @@ return RectorConfig::configure()
     ->withPhpSets()
     ->withRules([
         CodeQuality\BooleanNot\ReplaceMultipleBooleanNotRector::class,
-        CodeQuality\Foreach_\UnusedForeachValueToArrayKeysRector::class,
         CodeQuality\FuncCall\ChangeArrayPushToArrayAssignRector::class,
         CodeQuality\FuncCall\CompactToVariablesRector::class,
         CodeQuality\Identical\SimplifyArraySearchRector::class,
