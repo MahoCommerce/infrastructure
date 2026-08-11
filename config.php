@@ -38,8 +38,8 @@ return [
             // committed, github-actions only when the repo has workflows.
             '.github/dependabot.yml' => Dependabot::build(...),
             // Computed per repo: align the PHP version policy with maho. Pin an
-            // existing require.php floor to >=8.3 and lock config.platform.php to
-            // 8.3 when unset. Skips repos without a composer.json.
+            // existing require.php floor to the constraint below, and lock
+            // config.platform.php when unset. Skips repos with no composer.json.
             'composer.json' => ComposerPolicy::ensure('>=8.3', '8.3'),
             // Computed per repo: normalise the PHP matrix in the version-sensitive
             // workflows to match maho. Only existing workflows are touched (never
@@ -153,7 +153,7 @@ return [
         // rules only, so they do not need it, and `maho` requires
         // maho-composer-plugin, so adding it back would close a dependency
         // cycle. Rector's PHP set follows each repo's own composer.json (see
-        // .rector.php), which the policy below keeps at 8.3. maho keeps its own
+        // .rector.php), which the policy below keeps aligned. maho keeps its own
         // larger configs and is deliberately not in this group.
         'php-libraries' => [
             'repos' => [
