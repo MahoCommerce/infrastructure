@@ -127,8 +127,8 @@ return [
                 '.php-cs-fixer.php' => '.php-cs-fixer.php',
                 '.rector.php' => '.rector.php',
                 // Override the default PHP-only policy: modules also need the
-                // lint/test tooling in require-dev (the rector config resolves
-                // Maho\Rector\* from mahocommerce/maho).
+                // lint/test tooling in require-dev (mahocommerce/maho is what
+                // lets phpstan resolve the Mage_* classes a module extends).
                 'composer.json' => ComposerPolicy::ensure('>=8.3', '8.3', [
                     'friendsofphp/php-cs-fixer' => '*',
                     'mahocommerce/maho' => '*',
@@ -136,6 +136,39 @@ return [
                     'phpstan/phpstan' => '*',
                     'phpstan/phpstan-deprecation-rules' => '*',
                     'phpstan/phpstan-strict-rules' => '*',
+                    'rector/rector' => '*',
+                ]),
+            ],
+            'replaces' => [
+                '.github/workflows/lint.yml' => [
+                    '.github/workflows/php-cs-fixer.yml',
+                    '.github/workflows/rector.yml',
+                ],
+            ],
+        ],
+        // Standalone PHP packages that are not modules. They ship their own
+        // dependencies and their own phpstan setup, so they take the lint half
+        // of the module baseline only. Note the absence of `mahocommerce/maho`
+        // in require-dev: the shared cs-fixer and rector configs use standard
+        // rules only, so they do not need it, and `maho` requires
+        // maho-composer-plugin, so adding it back would close a dependency
+        // cycle. Rector's PHP set follows each repo's own composer.json (see
+        // .rector.php), which the policy below keeps at 8.3. maho keeps its own
+        // larger configs and is deliberately not in this group.
+        'php-libraries' => [
+            'repos' => [
+                'directory-data',
+                'maho-composer-plugin',
+                'maho-phpstan-plugin',
+            ],
+            'files' => [
+                '.github/workflows/lint.yml' => '.github/workflows/lint.yml',
+                '.php-cs-fixer.php' => '.php-cs-fixer.php',
+                '.rector.php' => '.rector.php',
+                // Override the default PHP-only policy with the two tools the
+                // configs above run. Existing entries are left as-is.
+                'composer.json' => ComposerPolicy::ensure('>=8.3', '8.3', [
+                    'friendsofphp/php-cs-fixer' => '*',
                     'rector/rector' => '*',
                 ]),
             ],
