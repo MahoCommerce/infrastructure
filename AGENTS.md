@@ -50,7 +50,7 @@ Implement a `final readonly` class in `src/Sync/` with `run(string $repo, array 
 
 ## CI / production runs
 
-`.github/workflows/sync.yml` runs weekly (Mondays 06:17 UTC) and on demand. It authenticates as a GitHub App via `actions/create-github-app-token` using the org secrets `MAHO_ORGANIZATION_CONTROLLER_CLIENT_ID` + `MAHO_ORGANIZATION_CONTROLLER_PRIVATE_KEY`, minting a short-lived org-scoped token. **Scheduled runs are always forced to `--dry-run`**; to actually apply, trigger `workflow_dispatch` from the Actions tab and untick "Report changes without applying".
+`.github/workflows/sync.yml` runs weekly (Mondays 06:17 UTC) and on demand. It authenticates as a GitHub App via `actions/create-github-app-token` using the org secrets `MAHO_ORGANIZATION_CONTROLLER_CLIENT_ID` + `MAHO_ORGANIZATION_CONTROLLER_PRIVATE_KEY`, minting a short-lived org-scoped token. **The weekly run applies.** Nothing lands unreviewed: settings/actions/security are patched in place (their whole point), while managed files only ever arrive as a PR on the `infra-sync` branch. To preview instead, trigger `workflow_dispatch` from the Actions tab and tick "Report changes without applying".
 
 ## Conventions
 

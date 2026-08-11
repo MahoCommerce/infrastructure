@@ -105,9 +105,10 @@ php sync.php --repo=module-mollie      # limit to one repo
 `.github/workflows/sync.yml` runs weekly and on demand. It authenticates as a
 GitHub App (`MAHO_ORGANIZATION_CONTROLLER_CLIENT_ID` +
 `MAHO_ORGANIZATION_CONTROLLER_PRIVATE_KEY` org secrets) and mints a
-short-lived token scoped to the org. Scheduled runs are always forced to
-`--dry-run`; to apply, trigger `workflow_dispatch` from the Actions tab and
-untick the dry-run input.
+short-lived token scoped to the org. The weekly run applies: settings are
+patched in place, and managed files land as a PR on the `infra-sync` branch,
+so they still need review. To preview instead, trigger `workflow_dispatch`
+from the Actions tab and tick the dry-run input.
 
 ## Adding a reconciler
 

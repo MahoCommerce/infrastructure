@@ -1,8 +1,10 @@
 name: Sync org repositories
 
-# The scheduled run is always report-only (dry-run): it never modifies a repo
-# or opens a PR, it just logs what would change. To actually apply, trigger it
-# manually from the Actions tab and untick "Report changes without applying".
+# The scheduled run applies: reconciling weekly is the point of the tool.
+# Settings, actions and security are patched directly, because GitHub has no PR
+# flow for them. Managed files only ever land as a PR on the infra-sync branch,
+# and an already-open PR is re-used rather than duplicated, so a weekly apply
+# cannot pile up PRs. Tick the dispatch input below to preview instead.
 on:
   schedule:
     - cron: '17 6 * * 1'   # Mondays 06:17 UTC
@@ -11,7 +13,7 @@ on:
       dry_run:
         description: 'Report changes without applying them'
         type: boolean
-        default: true
+        default: false
 
 concurrency:
   group: org-sync
@@ -40,9 +42,9 @@ jobs:
           private-key: ${{ secrets.MAHO_ORGANIZATION_CONTROLLER_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
 
-      # Scheduled runs are forced to dry-run; only a manual dispatch with the
-      # box unticked applies changes.
+      # `inputs` is empty on a schedule event, so the flag resolves to '' there
+      # and the weekly run applies.
       - name: Run sync
         env:
           GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
-        run: php sync.php ${{ (github.event_name == 'schedule' || inputs.dry_run) && '--dry-run' || '' }}
+        run: php sync.php ${{ inputs.dry_run && '--dry-run' || '' }}
