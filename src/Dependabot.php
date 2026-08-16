@@ -50,6 +50,9 @@ final readonly class Dependabot
     /**
      * One updater block. A single catch-all group batches every dependency in
      * the ecosystem into one PR per run, instead of one PR per dependency.
+     * The cooldown keeps releases out until they are 7 days old, so the
+     * community has time to flag a malicious release; security updates for
+     * known CVEs bypass it.
      */
     private static function ecosystem(string $name): string
     {
@@ -58,6 +61,8 @@ final readonly class Dependabot
                 directory: "/"
                 schedule:
                   interval: "weekly"
+                cooldown:
+                  default-days: 7
                 groups:
                   all-dependencies:
                     patterns:
