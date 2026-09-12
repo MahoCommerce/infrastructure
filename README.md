@@ -46,16 +46,21 @@ Applied to every repo in [scope](#scope):
   `composer.lock` is committed, a `github-actions` updater only when the repo has
   workflows; weekly schedule
 - `composer.json`, computed per repo to match `maho`'s PHP policy: pins an
-  existing `require.php` floor to `>=8.3` and adds `config.platform.php` (`8.3`)
+  existing `require.php` floor to `>=8.5` and adds `config.platform.php` (`8.5`)
   when unset. Edited in place via Composer's `JsonManipulator`, so the diff is
   only the changed lines; repos without a `composer.json` are skipped
 - `.github/workflows/phpstan.yml`, `.github/workflows/syntax-php.yml`: the PHP
-  version matrix is normalised to match `maho` (`['8.3', '8.4', '8.5']`). Only
+  version matrix is normalised to match `maho` (`['8.5', '8.6']`). Only
   the bracketed version list is rewritten; existing workflows are never created,
   only aligned. Lint and pest stay single-version, so they're left untouched
 - `.github/workflows/ai-assisted-note.yml`: appends a GenAI transparency note to
   a PR's body when the `✨ ai-assisted` label (above) is added, and strips it when
   removed. Synced verbatim from infra's own copy
+- `.gitattributes` and `.editorconfig` (PHP modules and libraries only): one
+  canonical pair. The `.gitattributes` `export-ignore` list keeps dev-only files
+  out of the Composer tarball; `git archive` ignores a listed path the repo does
+  not have, so the one list fits every repo. `directory-data` keeps its own
+  `.gitattributes` (it export-ignores its generator scripts too)
 
 ### Scope
 
@@ -77,12 +82,13 @@ automatically), plus any repo named in config, minus the `exclude` list.
   `groups` of repos, and per-repo overrides. Layers merge in that order, so a
   group adds to the defaults rather than replacing them.
 - There's no separate templates directory. The static files synced into repos
-  (`.php-cs-fixer.php`, `.rector.php`, `.github/workflows/lint.yml`,
+  (`.php-cs-fixer.php`, `rector.php`, `.gitattributes`, `.editorconfig`,
+  `.github/workflows/lint.yml`,
   `.github/workflows/ai-assisted-note.yml`, `.github/FUNDING.yml`) are infra's
   *own* root files, so the controller
   dogfoods exactly what it ships. `FileSync`'s base is the repo root and each
   managed-file source is named after the path it writes to. maho keeps its own
-  larger `.php-cs-fixer.php`/`.rector.php` (with the Varien→Maho migration) and
+  larger `.php-cs-fixer.php`/`rector.php` (with the Varien→Maho migration) and
   is not synced these.
 - `src/Sync/*` are the reconcilers (`SettingsSync`, `ActionsSync`,
   `SecuritySync`, `LabelSync`, `FileSync`). Each is idempotent: it reads current

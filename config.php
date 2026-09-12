@@ -19,7 +19,7 @@ use Maho\Infra\ComposerPolicy;
 use Maho\Infra\Dependabot;
 
 // PHP versions the version-sensitive CI checks run against, mirroring maho.
-$phpCiVersions = ['8.3', '8.4', '8.5'];
+$phpCiVersions = ['8.5', '8.6'];
 
 return [
     'owner' => 'MahoCommerce',
@@ -40,7 +40,7 @@ return [
             // Computed per repo: align the PHP version policy with maho. Pin an
             // existing require.php floor to the constraint below, and lock
             // config.platform.php when unset. Skips repos with no composer.json.
-            'composer.json' => ComposerPolicy::ensure('>=8.3', '8.3'),
+            'composer.json' => ComposerPolicy::ensure('>=8.5', '8.5'),
             // Computed per repo: normalise the PHP matrix in the version-sensitive
             // workflows to match maho. Only existing workflows are touched (never
             // created); lint/pest stay single-version and aren't listed here.
@@ -125,11 +125,16 @@ return [
             'files' => [
                 '.github/workflows/lint.yml' => '.github/workflows/lint.yml',
                 '.php-cs-fixer.php' => '.php-cs-fixer.php',
-                '.rector.php' => '.rector.php',
+                'rector.php' => 'rector.php',
+                // Dev-only files never need to ship in the Composer tarball.
+                // `git archive` ignores a listed path a repo does not have, so
+                // one canonical list works for every repo in the group.
+                '.gitattributes' => '.gitattributes',
+                '.editorconfig' => '.editorconfig',
                 // Override the default PHP-only policy: modules also need the
                 // lint/test tooling in require-dev (mahocommerce/maho is what
                 // lets phpstan resolve the Mage_* classes a module extends).
-                'composer.json' => ComposerPolicy::ensure('>=8.3', '8.3', [
+                'composer.json' => ComposerPolicy::ensure('>=8.5', '8.5', [
                     'friendsofphp/php-cs-fixer' => '*',
                     'mahocommerce/maho' => '*',
                     'mahocommerce/maho-phpstan-plugin' => '*',
@@ -144,6 +149,11 @@ return [
                     '.github/workflows/php-cs-fixer.yml',
                     '.github/workflows/rector.yml',
                 ],
+                // Rector discovers `rector.php` on its own, so the config moved
+                // off the dotfile name. Retire the old copy in the same PR.
+                'rector.php' => [
+                    '.rector.php',
+                ],
             ],
         ],
         // Standalone PHP packages that are not modules. They ship their own
@@ -153,7 +163,7 @@ return [
         // rules only, so they do not need it, and `maho` requires
         // maho-composer-plugin, so adding it back would close a dependency
         // cycle. Rector's PHP set follows each repo's own composer.json (see
-        // .rector.php), which the policy below keeps aligned. maho keeps its own
+        // rector.php), which the policy below keeps aligned. maho keeps its own
         // larger configs and is deliberately not in this group.
         'php-libraries' => [
             'repos' => [
@@ -164,10 +174,15 @@ return [
             'files' => [
                 '.github/workflows/lint.yml' => '.github/workflows/lint.yml',
                 '.php-cs-fixer.php' => '.php-cs-fixer.php',
-                '.rector.php' => '.rector.php',
+                'rector.php' => 'rector.php',
+                // Dev-only files never need to ship in the Composer tarball.
+                // `git archive` ignores a listed path a repo does not have, so
+                // one canonical list works for every repo in the group.
+                '.gitattributes' => '.gitattributes',
+                '.editorconfig' => '.editorconfig',
                 // Override the default PHP-only policy with the two tools the
                 // configs above run. Existing entries are left as-is.
-                'composer.json' => ComposerPolicy::ensure('>=8.3', '8.3', [
+                'composer.json' => ComposerPolicy::ensure('>=8.5', '8.5', [
                     'friendsofphp/php-cs-fixer' => '*',
                     'rector/rector' => '*',
                 ]),
@@ -177,6 +192,11 @@ return [
                     '.github/workflows/php-cs-fixer.yml',
                     '.github/workflows/rector.yml',
                 ],
+                // Rector discovers `rector.php` on its own, so the config moved
+                // off the dotfile name. Retire the old copy in the same PR.
+                'rector.php' => [
+                    '.rector.php',
+                ],
             ],
         ],
     ],
@@ -185,6 +205,15 @@ return [
     // win over both defaults and groups. A `false` file source opts the repo
     // out of a default file (it still gets the default settings).
     'repos' => [
+        // directory-data keeps a bespoke .gitattributes: it also export-ignores
+        // its own generator scripts (generate.php, validate.php, …), which no
+        // other repo has. The canonical list would drop those lines, so this
+        // repo keeps its own file and takes the .editorconfig only.
+        'directory-data' => [
+            'files' => [
+                '.gitattributes' => false,
+            ],
+        ],
         // Icons is a pure SVG distribution package: no PHP code, no dependencies,
         // so the composer PHP policy has nothing to police there. The PHP CI
         // matrix files don't exist in the repo, so those syncs already no-op.
@@ -208,8 +237,8 @@ return [
             'files' => [
                 '.github/workflows/lint.yml' => false,
                 '.php-cs-fixer.php' => false,
-                '.rector.php' => false,
-                'composer.json' => ComposerPolicy::ensure('>=8.3', '8.3'),
+                'rector.php' => false,
+                'composer.json' => ComposerPolicy::ensure('>=8.5', '8.5'),
             ],
         ],
     ],

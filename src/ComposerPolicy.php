@@ -14,10 +14,10 @@ use Composer\Json\JsonManipulator;
 /**
  * Aligns a repo's `composer.json` with org policy:
  *
- *  - **`require.php`** is pinned to the canonical constraint (e.g. `">=8.3"`),
+ *  - **`require.php`** is pinned to the canonical constraint (e.g. `">=8.5"`),
  *    but only when the repo already declares one; we never invent a floor for a
  *    project that deliberately floats.
- *  - **`config.platform.php`** is added (e.g. `"8.3"`) when absent, so Composer
+ *  - **`config.platform.php`** is added (e.g. `"8.5"`) when absent, so Composer
  *    resolves dependencies against that PHP version regardless of the CI/host
  *    runtime. An existing value is left untouched.
  *  - **`require-dev`** entries are ensured when a baseline is passed (e.g. the
@@ -36,8 +36,8 @@ final readonly class ComposerPolicy
 {
     /**
      * Build a computed file source that pins `require.php` to `$constraint`
-     * (e.g. `">=8.3"`), ensures `config.platform.php` is `$platform` (e.g.
-     * `"8.3"`), and adds any missing `$requireDev` entries (package => version
+     * (e.g. `">=8.5"`), ensures `config.platform.php` is `$platform` (e.g.
+     * `"8.5"`), and adds any missing `$requireDev` entries (package => version
      * constraint). The returned closure matches the signature FileSync expects.
      *
      * @param array<string, string> $requireDev

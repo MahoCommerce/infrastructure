@@ -26,7 +26,7 @@ composer lint:rector
 composer lint:phpstan
 ```
 
-There is no test suite. CI (`.github/workflows/lint.yml`) runs `composer lint` across PHP 8.3 / 8.4 / 8.5 on every push and PR. PHPStan runs at level 8 with bleeding-edge + strict + deprecation rules; keep it clean.
+There is no test suite. CI (`.github/workflows/lint.yml`) runs `composer lint` across PHP 8.5 / 8.6 on every push and PR. PHPStan runs at level 8 with bleeding-edge + strict + deprecation rules; keep it clean.
 
 ## Architecture
 
@@ -54,6 +54,6 @@ Implement a `final readonly` class in `src/Sync/` with `run(string $repo, array 
 
 ## Conventions
 
-- PHP 8.3+, `declare(strict_types=1)`, `final readonly` classes, PSR-4 under `Maho\Infra\` → `src/`.
+- PHP 8.5+, `declare(strict_types=1)`, `final readonly` classes, PSR-4 under `Maho\Infra\` → `src/`.
 - Every PHP file carries the SPDX copyright/license header.
 - Reconcilers must stay **idempotent** and respect dry-run (only ever write through the `GitHub` wrapper's guarded methods).
