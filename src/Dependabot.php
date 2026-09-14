@@ -18,6 +18,7 @@ namespace Maho\Infra;
  *  - **composer** only when `composer.lock` is committed (libraries that don't
  *    pin a lock are intentionally left to float).
  *  - **github-actions** only when the repo has workflows for Dependabot to scan.
+ *  - **npm** only when a lockfile is committed, for the same reason as composer.
  *
  * Used as a computed file source (see {@see Sync\FileSync}); returns `null` when
  * neither ecosystem applies, so no file is synced.
@@ -36,6 +37,12 @@ final readonly class Dependabot
         }
         if (self::exists($gh, $owner, $repo, '.github/workflows')) {
             $blocks[] = self::ecosystem('github-actions');
+        }
+        foreach (['package-lock.json', 'yarn.lock', 'pnpm-lock.yaml'] as $lock) {
+            if (self::exists($gh, $owner, $repo, $lock)) {
+                $blocks[] = self::ecosystem('npm');
+                break;
+            }
         }
 
         if ($blocks === []) {
