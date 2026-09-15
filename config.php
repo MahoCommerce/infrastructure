@@ -74,6 +74,11 @@ return [
             '.github/workflows/phpstan.yml' => CiMatrix::normalize('.github/workflows/phpstan.yml', $phpCiVersions),
             '.github/workflows/syntax-php.yml' => CiMatrix::normalize('.github/workflows/syntax-php.yml', $phpCiVersions),
             '.github/workflows/install-with-prefix.yml' => CiMatrix::normalize('.github/workflows/install-with-prefix.yml', $phpCiVersions),
+            // A repo's own test workflow holds both shapes: a Pest matrix and,
+            // where a job needs a live backend, a single version. Normalise runs
+            // first, so the matrix line is already rewritten when pin() reads the
+            // file and only the scalar is left to it.
+            '.github/workflows/tests.yml' => CiMatrix::align('.github/workflows/tests.yml', $phpCiVersions, $phpPlatform),
             // lint runs once, so it takes the floor rather than a matrix. The
             // module/library groups below replace this with the verbatim shared
             // workflow, which already carries the floor.
@@ -135,6 +140,7 @@ return [
                 '.github/workflows/phpstan.yml' => false,
                 '.github/workflows/syntax-php.yml' => false,
                 '.github/workflows/install-with-prefix.yml' => false,
+                '.github/workflows/tests.yml' => false,
                 '.github/workflows/lint.yml' => false,
                 '.github/workflows/ai-assisted-note.yml' => false,
             ],
