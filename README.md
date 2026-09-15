@@ -63,9 +63,12 @@ Applied to every repo in [scope](#scope):
   `php-version` is pinned to the floor (`8.5`) instead. Repos in the module and
   library groups below take the shared `lint.yml` verbatim, which already carries
   the floor, so this applies to repos that keep their own copy
+- `.github/workflows/tests.yml`: holds both shapes, so both passes run. The Pest
+  matrix takes the version set and a job that needs a live backend takes the floor
 
-  Existing workflows are never created, only aligned. A workflow that only one
-  repo has (`pest.yml`, `theme-build.yml`, …) is that repo's own to pin.
+  Existing workflows are never created, only aligned, so a repo without one is
+  skipped. A workflow under a name no other repo uses (`pest.yml`,
+  `theme-build.yml`, …) stays that repo's own to pin.
 - `.github/workflows/ai-assisted-note.yml`: appends a GenAI transparency note to
   a PR's body when the `✨ ai-assisted` label (above) is added, and strips it when
   removed. Synced verbatim from infra's own copy
