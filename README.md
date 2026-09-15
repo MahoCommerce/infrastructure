@@ -49,10 +49,23 @@ Applied to every repo in [scope](#scope):
   `require.php` to `>=8.5` and `config.platform.php` to `8.5`, adding either
   when absent. Edited in place via Composer's `JsonManipulator`, so the diff is
   only the changed lines; repos without a `composer.json` are skipped
-- `.github/workflows/phpstan.yml`, `.github/workflows/syntax-php.yml`: the PHP
-  version matrix is normalised to match `maho` (`['8.5', '8.6']`). Only
-  the bracketed version list is rewritten; existing workflows are never created,
-  only aligned. Lint and pest stay single-version, so they're left untouched
+- `composer.lock`, computed from the `composer.json` above: its `content-hash`,
+  `platform.php` and `platform-overrides.php`. Composer rejects a lock whose
+  hash doesn't match the manifest beside it, so syncing one without the other
+  leaves every repo failing `composer validate`. The hash is a pure function of
+  the manifest, so nothing is resolved and no package version moves; repos
+  without a committed lock are skipped
+- `.github/workflows/phpstan.yml`, `.github/workflows/syntax-php.yml`,
+  `.github/workflows/install-with-prefix.yml`: the PHP version matrix is
+  normalised to match `maho` (`['8.5', '8.6']`). Only the bracketed version list
+  is rewritten
+- `.github/workflows/lint.yml`: runs once rather than on a matrix, so its single
+  `php-version` is pinned to the floor (`8.5`) instead. Repos in the module and
+  library groups below take the shared `lint.yml` verbatim, which already carries
+  the floor, so this applies to repos that keep their own copy
+
+  Existing workflows are never created, only aligned. A workflow that only one
+  repo has (`pest.yml`, `theme-build.yml`, …) is that repo's own to pin.
 - `.github/workflows/ai-assisted-note.yml`: appends a GenAI transparency note to
   a PR's body when the `✨ ai-assisted` label (above) is added, and strips it when
   removed. Synced verbatim from infra's own copy

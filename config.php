@@ -21,6 +21,30 @@ use Maho\Infra\Dependabot;
 // PHP versions the version-sensitive CI checks run against, mirroring maho.
 $phpCiVersions = ['8.5', '8.6'];
 
+// The org PHP floor. `$phpFloor` is the composer.json constraint, `$phpPlatform`
+// the exact version Composer resolves against, and the version the workflows
+// that run once (lint) are pinned to. All three move together.
+$phpFloor = '>=8.5';
+$phpPlatform = '8.5';
+
+// One policy object per require-dev baseline. composer.json and composer.lock
+// are separate managed files but must agree, so each pair comes from one object
+// rather than from two calls that could drift apart (see ComposerPolicy).
+$composerPolicy = ComposerPolicy::ensure($phpFloor, $phpPlatform);
+$modulePolicy = ComposerPolicy::ensure($phpFloor, $phpPlatform, [
+    'friendsofphp/php-cs-fixer' => '*',
+    'mahocommerce/maho' => '*',
+    'mahocommerce/maho-phpstan-plugin' => '*',
+    'phpstan/phpstan' => '*',
+    'phpstan/phpstan-deprecation-rules' => '*',
+    'phpstan/phpstan-strict-rules' => '*',
+    'rector/rector' => '*',
+]);
+$libraryPolicy = ComposerPolicy::ensure($phpFloor, $phpPlatform, [
+    'friendsofphp/php-cs-fixer' => '*',
+    'rector/rector' => '*',
+]);
+
 return [
     'owner' => 'MahoCommerce',
 
@@ -40,12 +64,20 @@ return [
             // Computed per repo: align the PHP version policy with maho. Pin
             // require.php and config.platform.php to the values below, adding
             // them when absent. Skips repos with no composer.json.
-            'composer.json' => ComposerPolicy::ensure('>=8.5', '8.5'),
-            // Computed per repo: normalise the PHP matrix in the version-sensitive
-            // workflows to match maho. Only existing workflows are touched (never
-            // created); lint/pest stay single-version and aren't listed here.
+            // composer.lock carries the matching content-hash and platform keys;
+            // without it Composer rejects the pair and `composer validate` fails.
+            'composer.json' => $composerPolicy->json(),
+            'composer.lock' => $composerPolicy->lock(),
+            // Computed per repo: align the PHP version the shared workflows run
+            // on with maho. Only existing workflows are touched (never created).
+            // Version-sensitive checks take the full matrix.
             '.github/workflows/phpstan.yml' => CiMatrix::normalize('.github/workflows/phpstan.yml', $phpCiVersions),
             '.github/workflows/syntax-php.yml' => CiMatrix::normalize('.github/workflows/syntax-php.yml', $phpCiVersions),
+            '.github/workflows/install-with-prefix.yml' => CiMatrix::normalize('.github/workflows/install-with-prefix.yml', $phpCiVersions),
+            // lint runs once, so it takes the floor rather than a matrix. The
+            // module/library groups below replace this with the verbatim shared
+            // workflow, which already carries the floor.
+            '.github/workflows/lint.yml' => CiMatrix::pin('.github/workflows/lint.yml', $phpPlatform),
             // Flags AI-assisted PRs with a GenAI transparency note when the
             // `✨ ai-assisted` label (below) is applied.
             '.github/workflows/ai-assisted-note.yml' => '.github/workflows/ai-assisted-note.yml',
@@ -99,8 +131,11 @@ return [
                 '.github/FUNDING.yml' => false,
                 '.github/dependabot.yml' => false,
                 'composer.json' => false,
+                'composer.lock' => false,
                 '.github/workflows/phpstan.yml' => false,
                 '.github/workflows/syntax-php.yml' => false,
+                '.github/workflows/install-with-prefix.yml' => false,
+                '.github/workflows/lint.yml' => false,
                 '.github/workflows/ai-assisted-note.yml' => false,
             ],
             // No human PRs land here either, so the AI-assisted label that
@@ -134,15 +169,8 @@ return [
                 // Override the default PHP-only policy: modules also need the
                 // lint/test tooling in require-dev (mahocommerce/maho is what
                 // lets phpstan resolve the Mage_* classes a module extends).
-                'composer.json' => ComposerPolicy::ensure('>=8.5', '8.5', [
-                    'friendsofphp/php-cs-fixer' => '*',
-                    'mahocommerce/maho' => '*',
-                    'mahocommerce/maho-phpstan-plugin' => '*',
-                    'phpstan/phpstan' => '*',
-                    'phpstan/phpstan-deprecation-rules' => '*',
-                    'phpstan/phpstan-strict-rules' => '*',
-                    'rector/rector' => '*',
-                ]),
+                'composer.json' => $modulePolicy->json(),
+                'composer.lock' => $modulePolicy->lock(),
             ],
             'replaces' => [
                 '.github/workflows/lint.yml' => [
@@ -182,10 +210,8 @@ return [
                 '.editorconfig' => '.editorconfig',
                 // Override the default PHP-only policy with the two tools the
                 // configs above run. Existing entries are left as-is.
-                'composer.json' => ComposerPolicy::ensure('>=8.5', '8.5', [
-                    'friendsofphp/php-cs-fixer' => '*',
-                    'rector/rector' => '*',
-                ]),
+                'composer.json' => $libraryPolicy->json(),
+                'composer.lock' => $libraryPolicy->lock(),
             ],
             'replaces' => [
                 '.github/workflows/lint.yml' => [
@@ -220,6 +246,7 @@ return [
         'icons' => [
             'files' => [
                 'composer.json' => false,
+                'composer.lock' => false,
             ],
         ],
         // Starter is meant to be cloned, so it must not carry our sponsor links.
@@ -238,7 +265,8 @@ return [
                 '.github/workflows/lint.yml' => false,
                 '.php-cs-fixer.php' => false,
                 'rector.php' => false,
-                'composer.json' => ComposerPolicy::ensure('>=8.5', '8.5'),
+                'composer.json' => $composerPolicy->json(),
+                'composer.lock' => $composerPolicy->lock(),
             ],
         ],
     ],
