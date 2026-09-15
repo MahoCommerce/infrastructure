@@ -15,11 +15,12 @@ use Composer\Json\JsonManipulator;
  * Aligns a repo's `composer.json` with org policy:
  *
  *  - **`require.php`** is pinned to the canonical constraint (e.g. `">=8.5"`),
- *    but only when the repo already declares one; we never invent a floor for a
- *    project that deliberately floats.
- *  - **`config.platform.php`** is added (e.g. `"8.5"`) when absent, so Composer
- *    resolves dependencies against that PHP version regardless of the CI/host
- *    runtime. An existing value is left untouched.
+ *    and added when the repo declares none. The shared rector.php derives its
+ *    target PHP version from this floor, so the floor must state the syntax
+ *    Rector writes into the repo.
+ *  - **`config.platform.php`** is pinned to the canonical version (e.g. `"8.5"`),
+ *    and added when absent, so Composer resolves dependencies against the same
+ *    PHP version as maho regardless of the CI/host runtime.
  *  - **`require-dev`** entries are ensured when a baseline is passed (e.g. the
  *    lint/test tooling every module needs). Existing entries are left as-is, so
  *    a repo can hold a tighter constraint; only missing ones are added.
@@ -36,7 +37,7 @@ final readonly class ComposerPolicy
 {
     /**
      * Build a computed file source that pins `require.php` to `$constraint`
-     * (e.g. `">=8.5"`), ensures `config.platform.php` is `$platform` (e.g.
+     * (e.g. `">=8.5"`), pins `config.platform.php` to `$platform` (e.g.
      * `"8.5"`), and adds any missing `$requireDev` entries (package => version
      * constraint). The returned closure matches the signature FileSync expects.
      *
@@ -76,16 +77,11 @@ final readonly class ComposerPolicy
 
         $manipulator = new JsonManipulator($current);
 
-        // Pin the floor only where one already exists.
-        if (self::has($decoded, ['require', 'php'])) {
-            $manipulator->addLink('require', 'php', $constraint);
-        }
-
-        // Lock the resolver platform, adding it only when missing so a repo that
-        // deliberately set a different value keeps it.
-        if (!self::has($decoded, ['config', 'platform', 'php'])) {
-            $manipulator->addConfigSetting('platform.php', $platform);
-        }
+        // Pin the floor and the resolver platform, adding either when missing.
+        // Every PHP version in the org moves together, so a value that already
+        // matches is a no-op and a drifted one is overwritten.
+        $manipulator->addLink('require', 'php', $constraint);
+        $manipulator->addConfigSetting('platform.php', $platform);
 
         // Add any missing baseline dev tooling, leaving existing entries alone.
         foreach ($requireDev as $package => $version) {

@@ -56,10 +56,10 @@ return RectorConfig::configure()
     // package:
     //
     //  - AddTypeToConst emits `const string FOO`. That is new syntax, not a
-    //    rewrite, so a repo that declares no require.php floor (such as
-    //    maho-composer-plugin) would ship code its own metadata never promised.
-    //    A composer plugin also runs on the user's PHP, not on the platform the
-    //    project resolved against.
+    //    rewrite: it adds nothing the code needs, and it turns a floor bump into
+    //    a hard parse error for anyone who installs with platform requirements
+    //    ignored. A composer plugin also runs on the user's PHP, not on the
+    //    platform the project resolved against.
     //  - ReadOnlyClass / ReadOnlyProperty change the contract, not the code: a
     //    readonly class cannot be extended by a normal child, and a readonly
     //    property cannot be written from one. Maho modules exist to be extended.

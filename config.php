@@ -37,9 +37,9 @@ return [
             // Computed per repo: composer updates only when composer.lock is
             // committed, github-actions only when the repo has workflows.
             '.github/dependabot.yml' => Dependabot::build(...),
-            // Computed per repo: align the PHP version policy with maho. Pin an
-            // existing require.php floor to the constraint below, and lock
-            // config.platform.php when unset. Skips repos with no composer.json.
+            // Computed per repo: align the PHP version policy with maho. Pin
+            // require.php and config.platform.php to the values below, adding
+            // them when absent. Skips repos with no composer.json.
             'composer.json' => ComposerPolicy::ensure('>=8.5', '8.5'),
             // Computed per repo: normalise the PHP matrix in the version-sensitive
             // workflows to match maho. Only existing workflows are touched (never

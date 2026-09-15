@@ -45,9 +45,9 @@ Applied to every repo in [scope](#scope):
 - `.github/dependabot.yml`, computed per repo: a `composer` updater only when a
   `composer.lock` is committed, a `github-actions` updater only when the repo has
   workflows; weekly schedule
-- `composer.json`, computed per repo to match `maho`'s PHP policy: pins an
-  existing `require.php` floor to `>=8.5` and adds `config.platform.php` (`8.5`)
-  when unset. Edited in place via Composer's `JsonManipulator`, so the diff is
+- `composer.json`, computed per repo to match `maho`'s PHP policy: pins
+  `require.php` to `>=8.5` and `config.platform.php` to `8.5`, adding either
+  when absent. Edited in place via Composer's `JsonManipulator`, so the diff is
   only the changed lines; repos without a `composer.json` are skipped
 - `.github/workflows/phpstan.yml`, `.github/workflows/syntax-php.yml`: the PHP
   version matrix is normalised to match `maho` (`['8.5', '8.6']`). Only
