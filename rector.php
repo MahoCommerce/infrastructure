@@ -40,9 +40,10 @@ return RectorConfig::configure()
             __DIR__ . '/lib',
             __DIR__ . '/public',
             __DIR__ . '/src',
-        ], 'is_dir'),
+        ], is_dir(...)),
         // Root-level entry points (e.g. the infra tool's sync.php / config.php).
-        // glob skips dotfiles, so this very config file isn't included.
+        // glob skips dotfiles, so .php-cs-fixer.php is left out; rector.php is
+        // a plain name now, so this config lints itself.
         glob(__DIR__ . '/*.php') ?: [],
     )))
     // No argument: Rector reads the target PHP version from composer.json

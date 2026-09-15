@@ -11,7 +11,7 @@ namespace Maho\Infra;
 
 /**
  * Normalises the PHP version matrix in a single CI workflow to match `maho`
- * (e.g. `['8.3', '8.4', '8.5']`), so the version-sensitive checks run against the
+ * (e.g. `['8.5', '8.6']`), so the version-sensitive checks run against the
  * same set of PHP versions everywhere.
  *
  * Scope is deliberate: `maho` only matrixes the checks whose result depends on
@@ -35,7 +35,7 @@ final readonly class CiMatrix
      * Build a computed file source that rewrites the PHP matrix in the workflow
      * at `$path` to `$versions`.
      *
-     * @param list<string> $versions e.g. `['8.3', '8.4', '8.5']`
+     * @param list<string> $versions e.g. `['8.5', '8.6']`
      */
     public static function normalize(string $path, array $versions): \Closure
     {

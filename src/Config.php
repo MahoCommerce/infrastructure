@@ -93,12 +93,7 @@ final readonly class Config
     /** @param array<array-key, mixed> $group */
     private function repoInGroup(string $repo, array $group): bool
     {
-        foreach ($this->groupRepos($group) as $pattern) {
-            if ($this->repoMatches($repo, $pattern)) {
-                return true;
-            }
-        }
-        return false;
+        return array_any($this->groupRepos($group), fn($pattern) => $this->repoMatches($repo, $pattern));
     }
 
     /**
