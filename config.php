@@ -128,8 +128,8 @@ return [
         // fanned out from l10n's own copy). So infra must NOT sync files into them
         // (opt them out of the default files) but still holds them to org
         // settings/security standards and makes them read-only (no issues/wiki/
-        // projects). PRs can't be disabled via the API; with no human write access
-        // the packs are effectively read-only.
+        // projects/pull requests). Translations go through Crowdin, and the
+        // publish workflow of maho-l10n pushes to the packs without a PR.
         'language-packs' => [
             'repos' => ['maho-language-*'],
             'files' => [
@@ -153,6 +153,7 @@ return [
                 'has_issues' => false,
                 'has_wiki' => false,
                 'has_projects' => false,
+                'has_pull_requests' => false,
             ],
         ],
         // The module baseline. Every module shares one cs-fixer and one rector
