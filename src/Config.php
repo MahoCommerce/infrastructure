@@ -121,10 +121,10 @@ final readonly class Config
 
     /**
      * Merge desired-state layers. Associative maps (`files`, `settings`,
-     * `actions`, `security`, `labels`, `replaces`) merge key-by-key so a later
-     * layer adds/overrides entries (`files`/`labels` entries can be set to
-     * `false` to opt out of an earlier layer); everything else is replaced
-     * wholesale.
+     * `actions`, `security`, `labels`, `rulesets`, `replaces`) merge key-by-key
+     * so a later layer adds/overrides entries (`files`/`labels`/`rulesets`
+     * entries can be set to `false` to opt out of an earlier layer); everything
+     * else is replaced wholesale.
      *
      * @param array<array-key, mixed> $base
      * @param array<array-key, mixed> $override
@@ -133,8 +133,8 @@ final readonly class Config
     private function merge(array $base, array $override): array
     {
         foreach ($override as $key => $value) {
-            if ($key === 'files' || $key === 'labels') {
-                // A `false` entry opts the repo out of a file/label set by an earlier layer.
+            if ($key === 'files' || $key === 'labels' || $key === 'rulesets') {
+                // A `false` entry opts the repo out of a file/label/ruleset set by an earlier layer.
                 $entries = [...(array) ($base[$key] ?? []), ...(array) $value];
                 $base[$key] = array_filter($entries, static fn(mixed $source): bool => $source !== false && $source !== null);
             } elseif ($key === 'settings' || $key === 'actions' || $key === 'security' || $key === 'replaces') {

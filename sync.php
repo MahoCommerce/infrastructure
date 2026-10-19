@@ -12,6 +12,7 @@ use Maho\Infra\GitHub;
 use Maho\Infra\Sync\ActionsSync;
 use Maho\Infra\Sync\FileSync;
 use Maho\Infra\Sync\LabelSync;
+use Maho\Infra\Sync\RulesetSync;
 use Maho\Infra\Sync\SecuritySync;
 use Maho\Infra\Sync\SettingsSync;
 
@@ -42,6 +43,7 @@ $reconcilers = [
     new ActionsSync($gh, $config->owner),
     new SecuritySync($gh, $config->owner),
     new LabelSync($gh, $config->owner),
+    new RulesetSync($gh, $config->owner),
     // Base is the repo root: managed-file sources are infra's own files, so the
     // controller dogfoods exactly what it distributes (no separate templates dir).
     new FileSync($gh, $config->owner, __DIR__),

@@ -32,6 +32,13 @@ Applied to every repo in [scope](#scope):
   there's no way to turn on the graph alone)
 - Dependabot security updates (auto-PRs for dependencies with a published advisory)
 
+**Branch rulesets**, via the rulesets API (GitHub Free has no organization
+rulesets, so each repo gets its own copy):
+
+- `Protect long-lived branches`: blocks deletion of and force-push to the
+  default branch, with no bypass. `maho` also covers its `NN.N` maintenance
+  branches. A ruleset that the config does not name is left alone
+
 **Labels**, patched directly via the labels API (no PR flow):
 
 - `✨ ai-assisted`: applied to pull requests developed with AI help. It pairs
@@ -107,7 +114,7 @@ automatically), plus any repo named in config, minus the `exclude` list.
   larger `.php-cs-fixer.php`/`rector.php` (with the Varien→Maho migration) and
   is not synced these.
 - `src/Sync/*` are the reconcilers (`SettingsSync`, `ActionsSync`,
-  `SecuritySync`, `LabelSync`, `FileSync`). Each is idempotent: it reads current
+  `SecuritySync`, `LabelSync`, `RulesetSync`, `FileSync`). Each is idempotent: it reads current
   state, acts only on drift, and is safe to run repeatedly.
 - `sync.php` resolves the effective config per repo and runs every reconciler.
 

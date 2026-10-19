@@ -115,6 +115,15 @@ return [
             'vulnerability_alerts' => true,
             'automated_security_fixes' => true,
         ],
+        // Branch rulesets, keyed by name. GitHub Free has no organization
+        // rulesets, so every repo gets its own copy. Nobody can bypass them,
+        // so no workflow may force-push to or delete these branches.
+        'rulesets' => [
+            'Protect long-lived branches' => [
+                'branches' => ['~DEFAULT_BRANCH'],
+                'rules' => ['deletion', 'non_fast_forward'],
+            ],
+        ],
     ],
 
     // Files for a named subset of repos. A group's `files` merge onto the
@@ -254,6 +263,16 @@ return [
             'files' => [
                 'composer.json' => false,
                 'composer.lock' => false,
+            ],
+        ],
+        // maho also protects its maintenance branches (26.9, 26.11, ...), which
+        // patch releases are cut from.
+        'maho' => [
+            'rulesets' => [
+                'Protect long-lived branches' => [
+                    'branches' => ['~DEFAULT_BRANCH', 'refs/heads/[0-9][0-9].*'],
+                    'rules' => ['deletion', 'non_fast_forward'],
+                ],
             ],
         ],
         // Starter is meant to be cloned, so it must not carry our sponsor links.
