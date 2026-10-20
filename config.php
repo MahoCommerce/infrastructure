@@ -275,6 +275,16 @@ return [
                 ],
             ],
         ],
+        // `./maho import:sample-data` downloads the branch named after the Maho
+        // version (26.9, 26.11, ...), so every version branch must stay intact.
+        'maho-sample-data' => [
+            'rulesets' => [
+                'Protect long-lived branches' => [
+                    'branches' => ['~DEFAULT_BRANCH', 'refs/heads/[0-9][0-9].*'],
+                    'rules' => ['deletion', 'non_fast_forward'],
+                ],
+            ],
+        ],
         // Starter is meant to be cloned, so it must not carry our sponsor links.
         'maho-starter' => [
             'files' => [

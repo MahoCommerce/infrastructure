@@ -37,7 +37,7 @@ rulesets, so each repo gets its own copy):
 
 - `Protect long-lived branches`: blocks deletion of and force-push to the
   default branch, with no bypass. `maho` also covers its `NN.N` maintenance
-  branches. A ruleset that the config does not name is left alone
+  branches, and `maho-sample-data` its `NN.N` version branches. A ruleset that the config does not name is left alone
 
 **Labels**, patched directly via the labels API (no PR flow):
 
