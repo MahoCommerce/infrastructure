@@ -1,0 +1,133 @@
+name: Release build
+
+# Builds the release package of the calling repo, signs its SLSA build provenance and SBOM,
+# and uploads both to the draft release. The signature names this workflow, so a change in
+# the calling repo cannot change how the package is built or signed. The caller runs it on
+# a draft release, before it is published: an immutable release accepts no new assets.
+on:
+  workflow_call:
+    inputs:
+      tag:
+        description: 'Tag of the draft release, for example 26.11.0'
+        required: true
+        type: string
+
+permissions: {}
+
+jobs:
+  build:
+    name: Package and SBOM
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      TAG: ${{ inputs.tag }}
+
+    steps:
+      - name: Check the version and the branch
+        id: names
+        run: |
+          if [[ ! "$TAG" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::'$TAG' is not a release version"
+            exit 1
+          fi
+          if [[ "$GITHUB_REF" != refs/heads/main && ! "$GITHUB_REF" =~ ^refs/heads/[0-9]{2}\.[0-9]+$ ]]; then
+            echo "::error::Run this workflow from main or from a maintenance branch, not from $GITHUB_REF"
+            exit 1
+          fi
+          {
+            echo "name=${GITHUB_REPOSITORY#*/}"
+            echo "dist=$RUNNER_TEMP/dist"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Build the package
+        env:
+          NAME: ${{ steps.names.outputs.name }}
+          DIST: ${{ steps.names.outputs.dist }}
+        run: |
+          mkdir -p "$DIST"
+          git archive --format=zip --prefix="$NAME-$TAG/" -o "$DIST/$NAME-$TAG.zip" "$GITHUB_SHA"
+
+      - name: Install Syft
+        id: syft
+        uses: anchore/sbom-action/download-syft@66cbf4bc1f1c0d2edc94016e65bc221b6bb0ad6c # v0.24.3
+
+      # A package can leave out composer.lock, so the SBOM comes from the commit, with the dependencies that the release was tested with.
+      - name: Generate the SBOM
+        env:
+          SYFT: ${{ steps.syft.outputs.cmd }}
+          NAME: ${{ steps.names.outputs.name }}
+          DIST: ${{ steps.names.outputs.dist }}
+        run: '"$SYFT" scan dir:. --source-name "$NAME" --source-version "$TAG" -o "cyclonedx-json=$DIST/$NAME-$TAG.cdx.json" --quiet'
+
+      - name: Keep the files for the signing job
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release-files
+          path: ${{ steps.names.outputs.dist }}
+          if-no-files-found: error
+          retention-days: 1
+
+  # Only this job can request a signing token, and it runs no code from the calling repo.
+  sign:
+    name: Provenance and upload
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      # Only an account with write access can read a draft release.
+      contents: write
+      id-token: write
+      attestations: write
+    env:
+      TAG: ${{ inputs.tag }}
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+
+    steps:
+      # The provenance names the commit that the workflow runs on, so the draft must target that commit.
+      - name: Check the draft release
+        id: files
+        run: |
+          read -r is_draft target < <(gh release view "$TAG" --json isDraft,targetCommitish --jq '"\(.isDraft) \(.targetCommitish)"')
+          if [[ "$is_draft" != true ]]; then
+            echo "::error::Release $TAG is not a draft"
+            exit 1
+          fi
+          if [[ "$target" != "$GITHUB_SHA" ]]; then
+            echo "::error::Release $TAG targets '$target', but this run is on $GITHUB_SHA"
+            exit 1
+          fi
+          name="${GITHUB_REPOSITORY#*/}"
+          {
+            echo "dist=$RUNNER_TEMP/dist"
+            echo "zip=$RUNNER_TEMP/dist/$name-$TAG.zip"
+            echo "sbom=$RUNNER_TEMP/dist/$name-$TAG.cdx.json"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Get the files from the build job
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: release-files
+          path: ${{ steps.files.outputs.dist }}
+
+      - name: Attest the build provenance
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: ${{ steps.files.outputs.zip }}
+
+      - name: Attest the SBOM
+        uses: actions/attest-sbom@c604332985a26aa8cf1bdc465b92731239ec6b9e # v4.1.0
+        with:
+          subject-path: ${{ steps.files.outputs.zip }}
+          sbom-path: ${{ steps.files.outputs.sbom }}
+
+      - name: Upload to the draft release
+        env:
+          ZIP: ${{ steps.files.outputs.zip }}
+          SBOM: ${{ steps.files.outputs.sbom }}
+        run: gh release upload "$TAG" "$ZIP" "$SBOM" --clobber

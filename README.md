@@ -139,6 +139,17 @@ patched in place, and managed files land as a PR on the `infra-sync` branch,
 so they still need review. To preview instead, trigger `workflow_dispatch`
 from the Actions tab and tick the dry-run input.
 
+## Release build
+
+`.github/workflows/release-build.yml` is a reusable workflow, not part of the
+sync. `maho` calls it on a draft release, pinned by commit SHA. One job builds
+the package with `git archive` and the CycloneDX SBOM with Syft, with read-only
+access. A second job checks the draft, signs the SLSA build provenance and the
+SBOM with GitHub artifact attestations, and uploads both to the draft. The
+signature names this workflow, so a change in `maho` alone cannot change how a
+release is built or signed (SLSA Build Level 3). After a change here, update
+the SHA in the caller.
+
 ## Adding a reconciler
 
 Implement a `final readonly` class in `src/Sync/` with a
