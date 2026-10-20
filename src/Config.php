@@ -80,6 +80,11 @@ final readonly class Config
             $merged = $this->merge($merged, (array) $this->repoOverrides[$repo]);
         }
 
+        // `only` keeps the named parts of the desired state and drops the rest.
+        if (isset($merged['only'])) {
+            $merged = array_intersect_key($merged, array_flip(array_map(strval(...), (array) $merged['only'])));
+        }
+
         return $merged;
     }
 

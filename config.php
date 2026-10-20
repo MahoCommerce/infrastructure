@@ -49,10 +49,7 @@ return [
     'owner' => 'MahoCommerce',
 
     // Repos the sync should never touch.
-    'exclude' => [
-        'infrastructure',
-        'sboms',
-    ],
+    'exclude' => [],
 
     // Applied to every non-archived org repo.
     'defaults' => [
@@ -265,6 +262,11 @@ return [
                 'composer.lock' => false,
             ],
         ],
+        // The controller itself: the sync manages only its branch ruleset. It
+        // holds the reusable release workflow that signs maho releases.
+        'infrastructure' => [
+            'only' => ['rulesets'],
+        ],
         // maho also protects its maintenance branches (26.9, 26.11, ...), which
         // patch releases are cut from.
         'maho' => [
@@ -290,6 +292,11 @@ return [
             'files' => [
                 '.github/FUNDING.yml' => false,
             ],
+        ],
+        // A bot commits the SBOMs and scan results every day, so the sync
+        // manages only the branch ruleset here.
+        'sboms' => [
+            'only' => ['rulesets'],
         ],
         // Legacy compat shim: it deliberately ships old Varien_Crypt code to
         // decrypt M1 mcrypt data under modern (libsodium) maho. The module lint

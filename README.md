@@ -88,7 +88,9 @@ rulesets, so each repo gets its own copy):
 ### Scope
 
 Every **public, non-archived** org repo is synced (new repos are picked up
-automatically), plus any repo named in config, minus the `exclude` list.
+automatically), plus any repo named in config, minus the `exclude` list. A
+per-repo `only` list limits a repo to some parts of the config:
+`infrastructure` and `sboms` take only the branch ruleset.
 **Private and archived repos are always skipped, even if named in config.**
 
 ### Not synced (manual)
