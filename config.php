@@ -17,6 +17,7 @@ declare(strict_types=1);
 use Maho\Infra\CiMatrix;
 use Maho\Infra\ComposerPolicy;
 use Maho\Infra\Dependabot;
+use Maho\Infra\GitHub;
 use Maho\Infra\SecurityPolicy;
 
 // PHP versions the version-sensitive CI checks run against, mirroring maho.
@@ -323,6 +324,14 @@ return [
                 'rector.php' => false,
                 'composer.json' => $composerPolicy->json(),
                 'composer.lock' => $composerPolicy->lock(),
+            ],
+        ],
+        // New modules start from this template and replace its `module-NAME`
+        // placeholder, so the security policy carries the placeholder too. After
+        // the rename it matches what the sync builds for the new repo.
+        'module-template' => [
+            'files' => [
+                '.github/SECURITY.md' => static fn(GitHub $gh, string $owner): string => SecurityPolicy::build($gh, $owner, 'module-NAME'),
             ],
         ],
     ],
