@@ -17,6 +17,7 @@ declare(strict_types=1);
 use Maho\Infra\CiMatrix;
 use Maho\Infra\ComposerPolicy;
 use Maho\Infra\Dependabot;
+use Maho\Infra\SecurityPolicy;
 
 // PHP versions the version-sensitive CI checks run against, mirroring maho.
 $phpCiVersions = ['8.5', '8.6'];
@@ -83,6 +84,10 @@ return [
             // Flags AI-assisted PRs with a GenAI transparency note when the
             // `✨ ai-assisted` label (below) is applied.
             '.github/workflows/ai-assisted-note.yml' => '.github/workflows/ai-assisted-note.yml',
+            // Computed per repo: tells reporters to use the repo's own private
+            // advisory form, which `private_vulnerability_reporting` below keeps
+            // open.
+            '.github/SECURITY.md' => SecurityPolicy::build(...),
         ],
         // Issue/PR labels, keyed by name. The ai-assisted-note workflow above is
         // inert without this label, so both are synced together.
@@ -111,6 +116,7 @@ return [
         'security' => [
             'vulnerability_alerts' => true,
             'automated_security_fixes' => true,
+            'private_vulnerability_reporting' => true,
         ],
         // Branch rulesets, keyed by name. GitHub Free has no organization
         // rulesets, so every repo gets its own copy. Nobody can bypass them,
@@ -149,6 +155,7 @@ return [
                 '.github/workflows/tests.yml' => false,
                 '.github/workflows/lint.yml' => false,
                 '.github/workflows/ai-assisted-note.yml' => false,
+                '.github/SECURITY.md' => false,
             ],
             // No human PRs land here either, so the AI-assisted label that
             // pairs with the workflow above is pointless too.
@@ -268,8 +275,12 @@ return [
             'only' => ['rulesets'],
         ],
         // maho also protects its maintenance branches (26.9, 26.11, ...), which
-        // patch releases are cut from.
+        // patch releases are cut from. maho keeps its own root SECURITY.md,
+        // which also documents how to verify a signed release.
         'maho' => [
+            'files' => [
+                '.github/SECURITY.md' => false,
+            ],
             'rulesets' => [
                 'Protect long-lived branches' => [
                     'branches' => ['~DEFAULT_BRANCH', 'refs/heads/[0-9][0-9].*'],
@@ -287,10 +298,12 @@ return [
                 ],
             ],
         ],
-        // Starter is meant to be cloned, so it must not carry our sponsor links.
+        // Starter is meant to be cloned, so it must not carry our sponsor links
+        // or a security policy that sends a clone's reports to us.
         'maho-starter' => [
             'files' => [
                 '.github/FUNDING.yml' => false,
+                '.github/SECURITY.md' => false,
             ],
         ],
         // A bot commits the SBOMs and scan results every day, so the sync

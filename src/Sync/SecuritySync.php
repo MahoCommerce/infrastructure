@@ -21,6 +21,9 @@ use Maho\Infra\GitHub;
  *   is no API to turn on the graph alone — see github/community #180308).
  * - `automated_security_fixes` opens PRs to bump dependencies with a published
  *   advisory; it builds on the alerts above.
+ * - `private_vulnerability_reporting` lets anyone report a vulnerability
+ *   privately through the repo's Security tab. The managed SECURITY.md links
+ *   to that form, which answers 404 while this is off.
  */
 final readonly class SecuritySync
 {
@@ -62,6 +65,17 @@ final readonly class SecuritySync
                 (bool) $security['automated_security_fixes'],
                 $enabled,
                 'Dependabot security updates',
+            );
+        }
+
+        if (array_key_exists('private_vulnerability_reporting', $security)) {
+            [$status, $body] = $this->gh->tryGet("{$base}/private-vulnerability-reporting");
+            $enabled = $status === 200 && ($body['enabled'] ?? false) === true;
+            $changes[] = $this->reconcile(
+                "{$base}/private-vulnerability-reporting",
+                (bool) $security['private_vulnerability_reporting'],
+                $enabled,
+                'private vulnerability reporting',
             );
         }
 

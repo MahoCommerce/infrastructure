@@ -31,6 +31,8 @@ Applied to every repo in [scope](#scope):
 - Dependency graph **+** Dependabot alerts (the API enables them together;
   there's no way to turn on the graph alone)
 - Dependabot security updates (auto-PRs for dependencies with a published advisory)
+- Private vulnerability reporting, so the advisory form that `SECURITY.md` links
+  to exists
 
 **Branch rulesets**, via the rulesets API (GitHub Free has no organization
 rulesets, so each repo gets its own copy):
@@ -79,6 +81,11 @@ rulesets, so each repo gets its own copy):
 - `.github/workflows/ai-assisted-note.yml`: appends a GenAI transparency note to
   a PR's body when the `✨ ai-assisted` label (above) is added, and strips it when
   removed. Synced verbatim from infra's own copy
+- `.github/SECURITY.md`, computed per repo: points reporters to the repo's own
+  private advisory form. Under `.github/` so the export-ignore list keeps it out
+  of the Composer tarball. Skipped on `maho`, which keeps its own root
+  `SECURITY.md`, on `maho-starter`, which is meant to be cloned, and on the
+  language packs, whose contents `maho-l10n` owns
 - `.gitattributes` and `.editorconfig` (PHP modules and libraries only): one
   canonical pair. The `.gitattributes` `export-ignore` list keeps dev-only files
   out of the Composer tarball; `git archive` ignores a listed path the repo does
