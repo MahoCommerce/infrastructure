@@ -23,11 +23,13 @@ use Maho\Infra\SecurityPolicy;
 // PHP versions the version-sensitive CI checks run against, mirroring maho.
 $phpCiVersions = ['8.5', '8.6'];
 
-// The org PHP floor. `$phpFloor` is the composer.json constraint, `$phpPlatform`
-// the exact version Composer resolves against, and the version the workflows
-// that run once (lint) are pinned to. All three move together.
-$phpFloor = '>=8.5';
-$phpPlatform = '8.5';
+// The org PHP floor. `$phpFloor` is the composer.json constraint and
+// `$phpPlatform` the exact version Composer resolves against. `$phpCiFloor` is
+// the version the workflows that run once (lint) are pinned to: setup-php takes
+// only major.minor. All three move together.
+$phpFloor = '>=8.5.1';
+$phpPlatform = '8.5.1';
+$phpCiFloor = '8.5';
 
 // One policy object per require-dev baseline. composer.json and composer.lock
 // are separate managed files but must agree, so each pair comes from one object
@@ -77,11 +79,11 @@ return [
             // where a job needs a live backend, a single version. Normalise runs
             // first, so the matrix line is already rewritten when pin() reads the
             // file and only the scalar is left to it.
-            '.github/workflows/tests.yml' => CiMatrix::align('.github/workflows/tests.yml', $phpCiVersions, $phpPlatform),
+            '.github/workflows/tests.yml' => CiMatrix::align('.github/workflows/tests.yml', $phpCiVersions, $phpCiFloor),
             // lint runs once, so it takes the floor rather than a matrix. The
             // module/library groups below replace this with the verbatim shared
             // workflow, which already carries the floor.
-            '.github/workflows/lint.yml' => CiMatrix::pin('.github/workflows/lint.yml', $phpPlatform),
+            '.github/workflows/lint.yml' => CiMatrix::pin('.github/workflows/lint.yml', $phpCiFloor),
             // Flags AI-assisted PRs with a GenAI transparency note when the
             // `✨ ai-assisted` label (below) is applied.
             '.github/workflows/ai-assisted-note.yml' => '.github/workflows/ai-assisted-note.yml',
