@@ -39,13 +39,14 @@ $phpCiFloor = '8.5';
 $composerPolicy = ComposerPolicy::ensure($phpFloor, $phpPlatform);
 $modulePolicy = ComposerPolicy::ensure($phpFloor, $phpPlatform, [
     'friendsofphp/php-cs-fixer' => '*',
-    'mahocommerce/maho' => '*',
     'mahocommerce/maho-phpstan-plugin' => '*',
     'phpstan/phpstan' => '*',
     'phpstan/phpstan-deprecation-rules' => '*',
     'phpstan/phpstan-strict-rules' => '*',
     'rector/rector' => '*',
 ], minimumStability: 'dev', pinDev: [
+    // Every module is developed and tested against the same Maho floor.
+    'mahocommerce/maho' => '>=26.11.1',
     // Every module runs the same Pest major as maho.
     'pestphp/pest' => '^5',
     'pestphp/pest-plugin-browser' => '^5',
