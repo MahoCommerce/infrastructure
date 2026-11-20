@@ -34,6 +34,8 @@ $phpCiFloor = '8.5';
 // One policy object per require-dev baseline. composer.json and composer.lock
 // are separate managed files but must agree, so each pair comes from one object
 // rather than from two calls that could drift apart (see ComposerPolicy).
+// Modules also pin minimum-stability: the maho baseline needs the Symfony AI
+// 1.0 betas, and `dev` with prefer-stable is what the modules already used.
 $composerPolicy = ComposerPolicy::ensure($phpFloor, $phpPlatform);
 $modulePolicy = ComposerPolicy::ensure($phpFloor, $phpPlatform, [
     'friendsofphp/php-cs-fixer' => '*',
@@ -43,7 +45,7 @@ $modulePolicy = ComposerPolicy::ensure($phpFloor, $phpPlatform, [
     'phpstan/phpstan-deprecation-rules' => '*',
     'phpstan/phpstan-strict-rules' => '*',
     'rector/rector' => '*',
-]);
+], minimumStability: 'dev');
 $libraryPolicy = ComposerPolicy::ensure($phpFloor, $phpPlatform, [
     'friendsofphp/php-cs-fixer' => '*',
     'rector/rector' => '*',

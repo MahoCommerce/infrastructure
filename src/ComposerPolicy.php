@@ -25,6 +25,15 @@ use Composer\Package\Locker;
  *  - **`require-dev`** entries are ensured when a baseline is passed (e.g. the
  *    lint/test tooling every module needs). Existing entries are left as-is, so
  *    a repo can hold a tighter constraint; only missing ones are added.
+ *  - **`minimum-stability`** and **`prefer-stable`** are pinned when a
+ *    stability is passed. A baseline can pull in a dependency that has only
+ *    pre-releases (maho needs the Symfony AI 1.0 betas), and without these keys
+ *    Composer quietly falls back to an older release of that dependency.
+ *    `prefer-stable` keeps every other package on its stable release.
+ *  - **`config.allow-plugins.php-http/discovery`** is pinned to `false`. The
+ *    plugin is pulled in transitively and only adds packages on its own, and a
+ *    non-interactive install stops on any plugin `allow-plugins` does not list.
+ *    A repo with a boolean `allow-plugins` (allow or block all) is left as-is.
  *
  * Both files are computed from the repo's live content (they can't be static
  * files, every repo has its own dependencies). Edits go through Composer's own
@@ -49,18 +58,20 @@ final readonly class ComposerPolicy
         private string $constraint,
         private string $platform,
         private array $requireDev = [],
+        private ?string $minimumStability = null,
     ) {}
 
     /**
      * Pin `require.php` to `$constraint` (e.g. `">=8.5"`), pin
-     * `config.platform.php` to `$platform` (e.g. `"8.5"`), and add any missing
-     * `$requireDev` entries.
+     * `config.platform.php` to `$platform` (e.g. `"8.5"`), add any missing
+     * `$requireDev` entries, and pin `minimum-stability` to `$minimumStability`
+     * (with `prefer-stable`) when one is given.
      *
      * @param array<string, string> $requireDev
      */
-    public static function ensure(string $constraint, string $platform, array $requireDev = []): self
+    public static function ensure(string $constraint, string $platform, array $requireDev = [], ?string $minimumStability = null): self
     {
-        return new self($constraint, $platform, $requireDev);
+        return new self($constraint, $platform, $requireDev, $minimumStability);
     }
 
     /** File source for `composer.json`. */
@@ -128,6 +139,18 @@ final readonly class ComposerPolicy
         $manipulator->addLink('require', 'php', $this->constraint);
         $manipulator->addConfigSetting('platform.php', $this->platform);
 
+        // Block php-http/discovery everywhere. A boolean allow-plugins already
+        // decides for every plugin, so only a list (or no key) gets the entry.
+        if (!is_bool($decoded['config']['allow-plugins'] ?? null)) {
+            $manipulator->addConfigSetting('allow-plugins.php-http/discovery', false);
+        }
+
+        // Let the baseline's pre-release dependencies resolve, stable first.
+        if ($this->minimumStability !== null) {
+            $manipulator->addMainKey('minimum-stability', $this->minimumStability);
+            $manipulator->addMainKey('prefer-stable', true);
+        }
+
         // Add any missing baseline dev tooling, leaving existing entries alone.
         $addedDependency = false;
         foreach ($this->requireDev as $package => $version) {
@@ -174,6 +197,11 @@ final readonly class ComposerPolicy
         // so a stale pair would keep installing against the old PHP version.
         self::setSubKey($manipulator, $decoded, 'platform', $this->constraint);
         self::setSubKey($manipulator, $decoded, 'platform-overrides', $this->platform);
+        // The lock records the stability settings it was resolved with.
+        if ($this->minimumStability !== null) {
+            $manipulator->addMainKey('minimum-stability', $this->minimumStability);
+            $manipulator->addMainKey('prefer-stable', true);
+        }
 
         $result = $manipulator->getContents();
 
