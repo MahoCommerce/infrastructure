@@ -45,10 +45,22 @@ $modulePolicy = ComposerPolicy::ensure($phpFloor, $phpPlatform, [
     'phpstan/phpstan-deprecation-rules' => '*',
     'phpstan/phpstan-strict-rules' => '*',
     'rector/rector' => '*',
-], minimumStability: 'dev');
+], minimumStability: 'dev', pinDev: [
+    // Every module runs the same Pest major as maho.
+    'pestphp/pest' => '^5',
+    'pestphp/pest-plugin-browser' => '^5',
+], allowPlugins: [
+    // Pest ships a Composer plugin; a blocked plugin stops `composer install`.
+    'pestphp/pest-plugin',
+]);
 $libraryPolicy = ComposerPolicy::ensure($phpFloor, $phpPlatform, [
     'friendsofphp/php-cs-fixer' => '*',
     'rector/rector' => '*',
+], pinDev: [
+    // Same Pest major as maho. Libraries have no storefront, so no browser plugin.
+    'pestphp/pest' => '^5',
+], allowPlugins: [
+    'pestphp/pest-plugin',
 ]);
 
 return [

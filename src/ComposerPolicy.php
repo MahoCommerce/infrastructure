@@ -11,6 +11,7 @@ namespace Maho\Infra;
 
 use Composer\Json\JsonManipulator;
 use Composer\Package\Locker;
+use Composer\Semver\Semver;
 
 /**
  * Aligns a repo's `composer.json`, and the `composer.lock` beside it, with org policy:
@@ -34,6 +35,11 @@ use Composer\Package\Locker;
  *    plugin is pulled in transitively and only adds packages on its own, and a
  *    non-interactive install stops on any plugin `allow-plugins` does not list.
  *    A repo with a boolean `allow-plugins` (allow or block all) is left as-is.
+ *  - **`require-dev`** entries in `$pinDev` are added when missing and
+ *    overwritten when the constraint differs (e.g. Pest's major version, which
+ *    every module must share with maho).
+ *  - **`config.allow-plugins`** entries in `$allowPlugins` are set to `true`,
+ *    so a Composer plugin that a dev package ships is not blocked on install.
  *
  * Both files are computed from the repo's live content (they can't be static
  * files, every repo has its own dependencies). Edits go through Composer's own
@@ -52,26 +58,39 @@ use Composer\Package\Locker;
 final readonly class ComposerPolicy
 {
     /**
-     * @param array<string, string> $requireDev package => version constraint
+     * @param array<string, string> $requireDev package => version constraint, added when missing
+     * @param array<string, string> $pinDev package => version constraint, added or overwritten
+     * @param list<string> $allowPlugins Composer plugin packages to allow
      */
     public function __construct(
         private string $constraint,
         private string $platform,
         private array $requireDev = [],
         private ?string $minimumStability = null,
+        private array $pinDev = [],
+        private array $allowPlugins = [],
     ) {}
 
     /**
      * Pin `require.php` to `$constraint` (e.g. `">=8.5"`), pin
      * `config.platform.php` to `$platform` (e.g. `"8.5"`), add any missing
-     * `$requireDev` entries, and pin `minimum-stability` to `$minimumStability`
-     * (with `prefer-stable`) when one is given.
+     * `$requireDev` entries, pin every `$pinDev` entry, allow every
+     * `$allowPlugins` plugin, and pin `minimum-stability` to
+     * `$minimumStability` (with `prefer-stable`) when one is given.
      *
      * @param array<string, string> $requireDev
+     * @param array<string, string> $pinDev
+     * @param list<string> $allowPlugins
      */
-    public static function ensure(string $constraint, string $platform, array $requireDev = [], ?string $minimumStability = null): self
-    {
-        return new self($constraint, $platform, $requireDev, $minimumStability);
+    public static function ensure(
+        string $constraint,
+        string $platform,
+        array $requireDev = [],
+        ?string $minimumStability = null,
+        array $pinDev = [],
+        array $allowPlugins = [],
+    ): self {
+        return new self($constraint, $platform, $requireDev, $minimumStability, $pinDev, $allowPlugins);
     }
 
     /** File source for `composer.json`. */
@@ -92,8 +111,9 @@ final readonly class ComposerPolicy
      *
      * That shortcut holds only while the **package set** is unchanged, which is
      * true of the PHP pins: they steer resolution, they don't add a dependency.
-     * Adding a `require-dev` entry does add one, and only a real `composer
-     * update` can put it in the lock. So a repo that gains one is skipped here
+     * Adding a `require-dev` entry does add one, and changing a pinned
+     * constraint can move one, and only a real `composer update` can put either
+     * in the lock. So a repo where either happens is skipped here
      * and left with a mismatched hash on purpose: the warning is what tells a
      * human to run the update, and a rewritten hash would hide it behind a lock
      * that installs without the new package.
@@ -109,17 +129,17 @@ final readonly class ComposerPolicy
     }
 
     /**
-     * The manifest this run would write, and whether producing it required
-     * adding a dependency.
+     * The manifest this run would write, and whether producing it changed the
+     * package set (a dependency added, or a pinned constraint changed).
      *
      * `drifted` is null when the live file already complies, so a caller that
      * needs the effective manifest either way falls back to `current`.
      *
-     * @return array{current: ?string, drifted: ?string, addedDependency: bool}
+     * @return array{current: ?string, drifted: ?string, needsUpdate: bool}
      */
     private function manifest(GitHub $gh, string $owner, string $repo): array
     {
-        $none = ['current' => null, 'drifted' => null, 'addedDependency' => false];
+        $none = ['current' => null, 'drifted' => null, 'needsUpdate' => false];
 
         $current = self::fetch($gh, $owner, $repo, 'composer.json');
         if ($current === null) {
@@ -152,11 +172,27 @@ final readonly class ComposerPolicy
         }
 
         // Add any missing baseline dev tooling, leaving existing entries alone.
-        $addedDependency = false;
+        $needsUpdate = false;
         foreach ($this->requireDev as $package => $version) {
             if (!self::has($decoded, ['require-dev', $package])) {
                 $manipulator->addLink('require-dev', $package, $version);
-                $addedDependency = true;
+                $needsUpdate = true;
+            }
+        }
+
+        // Pinned dev tooling: add it when missing, overwrite a different constraint.
+        foreach ($this->pinDev as $package => $version) {
+            if (($decoded['require-dev'][$package] ?? null) !== $version) {
+                $manipulator->addLink('require-dev', $package, $version);
+                $needsUpdate = true;
+            }
+        }
+
+        // Allow the Composer plugins the dev tooling ships (e.g. pestphp/pest-plugin).
+        // A boolean allow-plugins already decides for every plugin, as above.
+        if (!is_bool($decoded['config']['allow-plugins'] ?? null)) {
+            foreach ($this->allowPlugins as $plugin) {
+                $manipulator->addConfigSetting('allow-plugins.' . $plugin, true);
             }
         }
 
@@ -166,7 +202,7 @@ final readonly class ComposerPolicy
             'current' => $current,
             // Nothing drifted (manipulator left the content untouched) -> no-op.
             'drifted' => $result === $current ? null : $result,
-            'addedDependency' => $addedDependency,
+            'needsUpdate' => $needsUpdate,
         ];
     }
 
@@ -181,12 +217,21 @@ final readonly class ComposerPolicy
         // default branch, or the lock would be stale the moment the PR merges.
         $manifest = $this->manifest($gh, $owner, $repo);
         $effective = $manifest['drifted'] ?? $manifest['current'];
-        if ($effective === null || $manifest['addedDependency']) {
+        if ($effective === null || $manifest['needsUpdate']) {
             return null;
         }
 
         $decoded = json_decode($current, true);
         if (!is_array($decoded)) {
+            return null;
+        }
+
+        // A policy change can merge before anyone runs `composer update`. On
+        // the next run the manifest no longer drifts, so check the lock itself:
+        // a fresh hash over a lock that lacks the policy's packages would hide
+        // the mismatch that tells a human to update it.
+        $manifestData = json_decode($effective, true);
+        if (!is_array($manifestData) || !$this->lockHasPolicyPackages($decoded, $manifestData)) {
             return null;
         }
 
@@ -206,6 +251,43 @@ final readonly class ComposerPolicy
         $result = $manipulator->getContents();
 
         return $result === $current ? null : $result;
+    }
+
+    /**
+     * Whether the lock holds every package the policy puts in `require-dev`, at
+     * a version that satisfies the manifest's constraint for it.
+     *
+     * @param array<array-key, mixed> $lock the decoded lock file
+     * @param array<array-key, mixed> $manifest the decoded composer.json
+     */
+    private function lockHasPolicyPackages(array $lock, array $manifest): bool
+    {
+        $locked = [];
+        foreach ([...(array) ($lock['packages'] ?? []), ...(array) ($lock['packages-dev'] ?? [])] as $package) {
+            if (is_array($package) && is_string($package['name'] ?? null) && is_string($package['version'] ?? null)) {
+                $locked[$package['name']] = $package['version'];
+            }
+        }
+
+        foreach (array_keys([...$this->requireDev, ...$this->pinDev]) as $name) {
+            $constraint = ((array) ($manifest['require-dev'] ?? []))[$name] ?? null;
+            if (!is_string($constraint)) {
+                continue;
+            }
+            $version = $locked[$name] ?? null;
+            if ($version === null) {
+                return false;
+            }
+            try {
+                if (!Semver::satisfies($version, $constraint)) {
+                    return false;
+                }
+            } catch (\UnexpectedValueException) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /**

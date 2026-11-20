@@ -57,7 +57,11 @@ rulesets, so each repo gets its own copy):
 - `composer.json`, computed per repo to match `maho`'s PHP policy: pins
   `require.php` to `>=8.5` and `config.platform.php` to `8.5`, adding either
   when absent. Edited in place via Composer's `JsonManipulator`, so the diff is
-  only the changed lines; repos without a `composer.json` are skipped
+  only the changed lines; repos without a `composer.json` are skipped. PHP
+  modules (`module-*`) also get the lint tooling in `require-dev`, and
+  `pestphp/pest` and `pestphp/pest-plugin-browser` pinned to `^5` (the major
+  `maho` uses), with `pestphp/pest-plugin` in `config.allow-plugins`. PHP
+  libraries get `pestphp/pest: ^5` the same way, without the browser plugin
 - `composer.lock`, computed from the `composer.json` above: its `content-hash`,
   `platform.php` and `platform-overrides.php`. Composer rejects a lock whose
   hash doesn't match the manifest beside it, so syncing one without the other
